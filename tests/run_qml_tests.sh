@@ -10,7 +10,9 @@ cd "$(dirname "$0")/.."
 
 RUNNER="${QMLTESTRUNNER:-}"
 if [[ -z "$RUNNER" ]]; then
-    for candidate in qmltestrunner6 /usr/lib/qt6/bin/qmltestrunner; do
+    # Arch and its derivatives install the Qt 6 binaries under /usr/lib64,
+    # everything else under /usr/lib.
+    for candidate in qmltestrunner6 /usr/lib/qt6/bin/qmltestrunner /usr/lib64/qt6/bin/qmltestrunner; do
         if command -v "$candidate" >/dev/null 2>&1; then
             RUNNER="$candidate"
             break
@@ -43,7 +45,12 @@ if [[ -z "$QT_QPA_PLATFORM" ]]; then
     done
 fi
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-minimal}"
-export QML_IMPORT_PATH="${QML_IMPORT_PATH:-/usr/lib/qt6/qml}"
+# Both prefixes: /usr/lib64 on Arch and friends, /usr/lib elsewhere, and the
+# Plasma modules are not necessarily all under one of them.
+for qml_root in /usr/lib/qt6/qml /usr/lib64/qt6/qml /usr/lib/x86_64-linux-gnu/qt6/qml; do
+    [[ -d "$qml_root" ]] && QML_IMPORT_PATH="${QML_IMPORT_PATH:+$QML_IMPORT_PATH:}$qml_root"
+done
+export QML_IMPORT_PATH
 
 status=0
 for test_file in tests/qml/tst_*.qml; do
