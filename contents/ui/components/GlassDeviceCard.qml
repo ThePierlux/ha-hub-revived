@@ -97,8 +97,9 @@ PlasmaComponents3.ItemDelegate {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
 
-            EntityIcon {
-                source: ent.iconUrl
+            EntityBadge {
+                iconKind: ent.icon.kind
+                icon: ent.icon.name
                 active: ent.isOn
                 unavailable: ent.isUnavailable
                 circular: true

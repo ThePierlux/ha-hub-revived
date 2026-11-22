@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { loadLibrary } = require("./load-library.js");
+const { loadLibrary, ROOT } = require("./load-library.js");
 const helpers = loadLibrary("contents/code/ha_helpers.mjs");
 
 test("multi-gang switch channels are selectable, not secondary", () => {
@@ -181,20 +181,68 @@ test("entity icons keep the choice Home Assistant made", () => {
     assert.deepStrictEqual(shape(helpers.resolveEntityIcon("  mdi:Thermometer  ", "sensor")),
         { kind: "mdi", name: "thermometer" });
 
-    // An mdi: name the font does not carry, and icon sets we do not ship,
-    // must fall back instead of drawing an empty box.
-    assert.deepStrictEqual(shape(helpers.resolveEntityIcon("mdi:not_a_real_icon", "light")),
-        { kind: "theme", name: "brightness-high-symbolic" });
-    assert.deepStrictEqual(shape(helpers.resolveEntityIcon("phu:plug-zigbee", "switch")),
-        { kind: "theme", name: helpers.getDomainIcon("switch") });
-
-    // A plain theme name passes through, no icon takes the domain's one.
+    // A plain theme name passes through: whatever the user typed is what the
+    // icon theme is asked for, untouched.
     assert.deepStrictEqual(shape(helpers.resolveEntityIcon("network-wireless", "switch")),
         { kind: "theme", name: "network-wireless" });
+
+    // An mdi: name the font does not carry, and icon sets we do not ship, have
+    // to fall back rather than draw an empty box. The fallback is the domain's
+    // own glyph, which on this branch is one of the files under contents/icons
+    // - the set the fork drew itself, which covers every domain the widget
+    // lists, so an entity is never left showing nothing.
+    assert.deepStrictEqual(shape(helpers.resolveEntityIcon("mdi:not_a_real_icon", "light")),
+        { kind: "asset", name: "lightbulb" });
+    assert.deepStrictEqual(shape(helpers.resolveEntityIcon("phu:plug-zigbee", "switch")),
+        { kind: "asset", name: "plug" });
     assert.deepStrictEqual(shape(helpers.resolveEntityIcon("", "light")),
-        { kind: "theme", name: "brightness-high-symbolic" });
+        { kind: "asset", name: "lightbulb" });
+    assert.deepStrictEqual(shape(helpers.resolveEntityIcon("", "light", "on", {})),
+        { kind: "asset", name: "lightbulb-on" });
     assert.deepStrictEqual(shape(helpers.resolveEntityIcon(null, undefined)),
-        { kind: "theme", name: "preferences-system-symbolic" });
+        { kind: "asset", name: "device" });
+});
+
+// The resolver is allowed to name a file instead of an icon theme name only
+// because the file is there. A name with no .svg beside it paints nothing at
+// all, quietly, and only for the one entity that happens to hit that case.
+test("every icon the resolver calls an asset is a file we ship", () => {
+    const assets = new Set(fs.readdirSync(path.join(ROOT, "contents/icons"))
+        .filter((f) => f.endsWith(".svg")).map((f) => f.slice(0, -4)));
+    assert.ok(assets.size >= 40, "expected the bundled icon set, found " + assets.size);
+
+    const domains = ["light", "switch", "outlet", "input_boolean", "climate", "fan", "cover", "lock",
+        "binary_sensor", "sensor", "media_player", "scene", "script", "automation", "button",
+        "input_button", "vacuum", "camera", "person", "device_tracker", "weather", "valve", "siren",
+        "alarm_control_panel", "lawn_mower", "humidifier", "water_heater", "update", "number",
+        "input_number", "select", "input_select", "calendar", "input_datetime", "sun", "zone"];
+    const classes = ["motion", "occupancy", "door", "window", "garage_door", "opening", "moisture",
+        "smoke", "gas", "carbon_monoxide", "problem", "safety", "tamper", "lock", "battery", "cold",
+        "heat", "connectivity", "presence", "vibration", "sound", "running", "update", "power",
+        "energy", "temperature", "humidity", "illuminance", "pressure", "CO2", "pm25", "signal_strength",
+        "timestamp", "water", "battery_level", "power_factor", "apparent_power", "reactive_power",
+        "frequency", "voltage", "current", "gas", "volume", "duration", "pm10", "aqi", "atmospheric_pressure",
+        "carbon_dioxide", "pm1", "volatile_organic_compounds"];
+
+    const missing = new Set();
+    const seen = new Set();
+    const check = (raw, domain, state, attributes) => {
+        const r = helpers.resolveEntityIcon(raw, domain, state, attributes);
+        if (r.kind !== "asset") return;
+        seen.add(r.name);
+        if (!assets.has(r.name)) missing.add(`${domain}/${state}/${attributes.device_class} -> ${r.name}`);
+    };
+    for (const domain of domains) {
+        for (const state of ["on", "off", "open", "closed", "locked", "unlocked", "idle", "home"]) {
+            check("", domain, state, {});
+        }
+        for (const dc of classes) {
+            check("", domain, "on", { device_class: dc, unit_of_measurement: "W" });
+        }
+    }
+    assert.deepStrictEqual([...missing].sort(), [], "resolver names icons that are not bundled");
+    // The set is worth something only if the walk actually reached it.
+    assert.ok(seen.size >= 20, "the walk only exercised " + seen.size + " of the bundled icons");
 });
 
 // Objects returned by the sandboxed library carry another realm's prototype, so
