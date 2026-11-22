@@ -5,9 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-The widget gains the Home Assistant feature set developed by Sergey Alexeyev on
-top of this fork's 2.0 architecture — the language layer first, since every
-commit after it is checked by it.
+## [2.1.0] - 2026-11-22
+
+The Home Assistant feature set Sergey Alexeyev built on top of this fork's 2.0
+architecture, ported commit by commit: languages, Home Assistant's own entity
+icons, the Metro dashboard, history and the logbook, multi-channel devices,
+names of your own, a settings page for the look of it — and the tests that keep
+each of those honest.
 
 ### Added
 - The widget speaks 32 languages in all: 31 catalogs, one file each under
@@ -37,6 +41,18 @@ commit after it is checked by it.
   Dashboard), and the name is used everywhere the entity appears — the list, the
   tiles, the cards, the pickers — because every view asks the manager for the
   name rather than computing one.
+- **History and the logbook** on the device page: the last three days of an
+  entity's states and the events around them, asked over the same socket the
+  widget already holds.
+- **Multi-channel devices are usable**: a multi-gang switch, a LocalTuya plug,
+  a tunable-white lamp — anything with several controllable entities behind one
+  name — lists those channels on its page instead of showing one "primary"
+  entity and leaving the rest unreachable.
+- **Favorites** are picked by kind and room, with the counts of both shown
+  beside them, and each one says what it is doing.
+- The header greets the person Home Assistant says is home, and wears their
+  picture if they have one. Without a person chosen, it says what the server is
+  called, as before.
 - The connection layer is one file again, with the best of both: Home
   Assistant's registries and the entity catalog (areas, floors, labels, hidden
   and diagnostic flags, per-entity titles) from 1.3.1, and the widget's own
@@ -44,6 +60,12 @@ commit after it is checked by it.
   entities moves.
 
 ### Changed
+- The connection is proved live by asking: an active ping every 25 s replaces
+  waiting a minute and a half to notice that nothing arrived. A widget behind a
+  reverse proxy has to put traffic on the line to keep the line open anyway.
+- The Favorites page, the header, and the entity name each ask the manager
+  rather than computing an answer of their own — which is what makes one rename
+  reach the list, the tiles and the cards at once.
 - Strings are translated through `Loc.t()` and the catalogs rather than
   Plasma's `.mo` catalogs, which is why `translate/` is gone: Italian came over
   with them, as `catalogs/it.js`.

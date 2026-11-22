@@ -5,7 +5,7 @@ control and monitor Home Assistant from your Plasma desktop or panel.
 
 ![KDE Plasma 6](https://img.shields.io/badge/KDE_Plasma-6.0+-blue?logo=kde)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-green)
-![Version](https://img.shields.io/badge/Version-2.0.1-orange)
+![Version](https://img.shields.io/badge/Version-2.1.0-orange)
 
 > **A note from the maintainer.** I really liked the idea behind HA-Hub, so I decided to improve
 > it for my own needs. I have no intention whatsoever of taking credit for the original
@@ -17,6 +17,19 @@ control and monitor Home Assistant from your Plasma desktop or panel.
 > these changes back.
 
 ---
+
+## What's new in 2.1
+
+The feature set Sergey Alexeyev built on top of this fork, ported as a series of
+commits rather than dropped in as a blob — see `CHANGELOG.md` for the whole list.
+
+- **32 languages**, one file each, switched per widget and followed live; a new
+  language cannot ship half-done, because the test suite refuses it.
+- **The Metro dashboard** as a fourth view, with grouped coloured tiles and its own settings page.
+- **Home Assistant's own entity icons**, drawn from the bundled Material Design Icons font.
+- **History, the logbook and every channel** of a multi-gang or LocalTuya device.
+- **Names of your own**, a person for the header to greet, and a tray icon of your choosing.
+- **CI and tests**: every WebSocket payload, every language, every settings page's structure.
 
 ## What's new in 2.0
 
@@ -45,7 +58,21 @@ control and monitor Home Assistant from your Plasma desktop or panel.
 
 **Translations**
 - **Internationalization:** 32 built-in languages — English (the source), plus 31 translated
-  catalogs, switched per widget in Settings → General and followed live.
+  catalogs, one file each under `contents/l10n/catalogs/`, switched per widget in Settings → General and followed live.
+- `scripts/new-catalog.mjs` adds a language, and refuses one that is incomplete: every string the
+  widget can ask for has to be there, or the test suite fails.
+
+**Home Assistant**
+- **Metro dashboard** — a fourth view beside rows, tiles and cards: flat coloured tiles, grouped and
+  coloured by whoever arranges them, sized by the width of the popup alone so the grid cannot feed its
+  own width back into the tiles.
+- **The icon Home Assistant names.** Material Design Icons is bundled, so an entity given a light in
+  Home Assistant shows that light; entities with no icon of their own keep the widget's own set.
+- **History and the logbook** on the device page, and every channel of a multi-gang or LocalTuya
+  device, not just its "primary" entity.
+- **Names of your own:** rename any entity in the widget and the name is used everywhere it appears.
+- **A person to greet,** one entity whose value the header reads, and a tray icon of your choosing —
+  theme icon or picture — in Settings → Appearance.
 
 ---
 
@@ -56,9 +83,9 @@ control and monitor Home Assistant from your Plasma desktop or panel.
 
 ### Manual
 ```bash
-kpackagetool6 --type Plasma/Applet --install io.github.thepierlux.hahubrevived-2.0.1.plasmoid
+kpackagetool6 --type Plasma/Applet --install io.github.thepierlux.hahubrevived-2.1.0.plasmoid
 # update:
-kpackagetool6 --type Plasma/Applet --upgrade io.github.thepierlux.hahubrevived-2.0.1.plasmoid
+kpackagetool6 --type Plasma/Applet --upgrade io.github.thepierlux.hahubrevived-2.1.0.plasmoid
 ```
 
 ### From source
@@ -99,6 +126,9 @@ Build the `.plasmoid` archive with `./scripts/make-plasmoid.sh`.
   favorites manager come from the original project. Its full history is preserved in this
   repository.
 - **Fork maintainer:** [ThePierlux](https://github.com/ThePierlux).
+- **2.1:** [Sergey Alexeyev](https://github.com/s-n-alexeyev) — the language layer, the Metro
+  dashboard, the entity icons, history and the logbook, multi-channel devices, the aliases and
+  the settings pages, contributed as a pull request and ported into this fork's architecture.
 - **AI-assisted development:** the 2.0 rework (connection fixes, new views, icons,
   performance work, translations) was written with **Claude** (Anthropic, Claude Opus 5.5
   via Claude Code), after an earlier exploratory pass in Google Antigravity, and reviewed
