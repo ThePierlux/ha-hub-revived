@@ -17,7 +17,7 @@ const sampleGroups = () => [
         id: "g1", name: "Corridor", color: "#0078d7",
         tiles: [
             { entityId: "light.corridor", size: "medium", content: "" },
-            { entityId: "sensor.corridor", size: "small", content: "icon" }
+            { entityId: "sensor.corridor", size: "double", content: "icon" }
         ]
     },
     { id: "g2", name: "Night", color: "#ffd800", tiles: [] }
@@ -34,7 +34,7 @@ test("dashboard json parses, tolerates junk and dumps back", () => {
 
 test("sanitize drops broken entities, fixes sizes and colours", () => {
     const dirty = [
-        { id: "a", tiles: [{ entityId: "light.ok", size: "gigantic" }, { size: "small" }, null] },
+        { id: "a", tiles: [{ entityId: "light.ok", size: "gigantic" }, { size: "double" }, null] },
         { name: 42, color: "not-a-color", tiles: [{ entityId: "light.ok" }] },
         "junk"
     ];
@@ -69,7 +69,7 @@ test("legacy cards migrate into one untitled colourless group", () => {
     assert.equal(groups.length, 1);
     assert.equal(groups[0].name, "");
     assert.equal(groups[0].color, null, "keeps following the system accent");
-    eq(groups[0].tiles.map((t) => t.size), ["small", "wide", "wide", "medium"]);
+    eq(groups[0].tiles.map((t) => t.size), ["medium", "double", "double", "medium"]);
 
     // A configured dashboard wins over the legacy cards...
     assert.equal(model.normalizeDashboardModel(sampleJson(), cards).length, 2);
@@ -101,20 +101,52 @@ test("readableTextColor picks a legible text colour", () => {
 });
 
 test("tile spans stay inside the grid", () => {
-    eq(model.tileSpan("small", 4), { cols: 1, rows: 1 });
-    eq(model.tileSpan("medium", 4), { cols: 2, rows: 1 }, "rows are always one tile tall");
+    // "Columns" is the number of ordinary tiles a row holds: the default tile
+    // is one column wide, whatever the grid is set to.
+    for (const columns of [1, 2, 4, 6]) {
+        eq(model.tileSpan("medium", columns), { cols: 1, rows: 1 },
+            `an ordinary tile is one of the ${columns} columns`);
+    }
+    eq(model.tileSpan("double", 4), { cols: 2, rows: 1 });
+    eq(model.tileSpan("double", 1), { cols: 1, rows: 1 }, "double never exceeds columns");
     eq(model.tileSpan("wide", 2), { cols: 2, rows: 1 }, "wide never exceeds columns");
-    eq(model.tileSpan("large", 2), { cols: 2, rows: 1 }, "legacy large reads as wide");
-    eq(model.tileSpan("nonsense", 4), { cols: 4, rows: 1 }, "unknown sizes read as wide");
+    eq(model.tileSpan("wide", 5), { cols: 5, rows: 1 }, "wide takes the row");
+    eq(model.tileSpan("nonsense", 4), { cols: 1, rows: 1 },
+        "junk reads as the default rather than taking a row for itself");
+});
+
+test("the number in the setting is the number of tiles in a row", () => {
+    // The dashboard as it arrived asked every tile for two columns, so a grid
+    // set to 4 or to 5 stood two tiles wide: the number on the screen looked
+    // unrelated to the number in Settings, and 5 wasted a column of it.
+    for (const columns of [2, 3, 4, 5, 6]) {
+        const tiles = [];
+        for (let i = 0; i < columns; i++) tiles.push({ size: "medium" });
+        const out = model.layoutTiles(tiles, columns, 50, 5, 36);
+        for (let i = 0; i < columns; i++) {
+            assert.equal(out.rects[i].y, 0,
+                `tile ${i} of ${columns} in a ${columns}-column grid is in row one`);
+            assert.equal(out.rects[i].x, i * 55,
+                `tile ${i} stands where the ${columns}th column is`);
+        }
+        assert.equal(out.rows, 1, `${columns} ordinary tiles fill exactly one row`);
+    }
+
+    // One of each kind still fills a row of five, with nothing left over.
+    const out = model.layoutTiles(
+        [{ size: "double" }, { size: "medium" }, { size: "medium" }, { size: "medium" }],
+        5, 50, 5, 36);
+    assert.equal(out.rows, 1, "a double and three singles are five columns");
+    assert.equal(out.rects[3].x, 4 * 55);
 });
 
 test("layoutTiles packs tiles without any layout manager", () => {
     // 4 columns, 70 px units, 6 px gaps, 36 px rows.
     const tiles = [
-        { size: "small" },  // 1x1 at (0,0)
-        { size: "small" },  // 1x1 at (76,0)
-        { size: "medium" }, // 2x1 still fits in row 0: columns 2..4
-        { size: "wide" }    // 4x1 needs the row below
+        { size: "medium" }, // one column at (0,0)
+        { size: "medium" }, // one column at (76,0)
+        { size: "double" }, // two columns still fit in row 0: columns 2..4
+        { size: "wide" }    // all four columns need the row below
     ];
     const out = model.layoutTiles(tiles, 4, 70, 6, 36);
     eq(out.rects[0], { x: 0, y: 0, w: 70, h: 36 });
@@ -126,12 +158,12 @@ test("layoutTiles packs tiles without any layout manager", () => {
     assert.equal(out.rects.length, tiles.length, "one rect per tile, in order");
 
     // Without a row height the old square geometry is kept.
-    eq(model.layoutTiles([{ size: "small" }], 4, 70, 6).rects[0],
+    eq(model.layoutTiles([{ size: "medium" }], 4, 70, 6).rects[0],
        { x: 0, y: 0, w: 70, h: 70 });
 });
 
 test("layoutTiles never overlaps and never exceeds the columns", () => {
-    const sizes = ["large", "wide", "medium", "small", "medium", "wide", "small"];
+    const sizes = ["wide", "double", "medium", "medium", "double", "wide", "medium"];
     for (const columns of [1, 2, 3, 4]) {
         const out = model.layoutTiles(sizes.map(size => ({ size })), columns, 50, 5);
         assert.equal(out.rects.length, sizes.length);
@@ -187,12 +219,12 @@ test("group CRUD never mutates the stored list", () => {
 test("tile CRUD keeps entities unique and edits in place", () => {
     const groups = model.sanitizeGroups(sampleGroups());
 
-    const withTile = model.addTile(groups, "g2", "fan.bedroom", "small");
+    const withTile = model.addTile(groups, "g2", "fan.bedroom", "double");
     assert.equal(model.countTiles(withTile), 3);
     assert.equal(model.groupOf(withTile, "fan.bedroom"), "g2");
 
     // An entity that is already on the dashboard cannot be added twice.
-    assert.equal(JSON.stringify(model.addTile(withTile, "g1", "fan.bedroom", "small")),
+    assert.equal(JSON.stringify(model.addTile(withTile, "g1", "fan.bedroom", "double")),
                  JSON.stringify(withTile));
     assert.equal(JSON.stringify(model.addTile(groups, "ghost", "sensor.new", "")),
                  JSON.stringify(groups), "unknown group is a no-op");
@@ -200,6 +232,12 @@ test("tile CRUD keeps entities unique and edits in place", () => {
     const resized = model.setTileSize(withTile, "g2", "fan.bedroom", "large");
     assert.equal(resized[1].tiles[0].size, "wide", "legacy large maps onto the full-width row");
     assert.equal(model.setTileSize(resized, "g2", "fan.bedroom", "huge")[1].tiles[0].size, "medium");
+
+    // A size the picker stopped offering keeps the width it had on disk: half
+    // of a two-column tile is one column, which is what the default is worth.
+    const folded = model.sanitizeGroups(
+        [{ id: "g", tiles: [{ entityId: "light.old", size: "small" }] }]);
+    assert.equal(folded[0].tiles[0].size, "medium", "the old small tile reads as a default one");
 
     const retitled = model.setTileContent(resized, "g2", "fan.bedroom", "title");
     assert.equal(retitled[1].tiles[0].content, "title");

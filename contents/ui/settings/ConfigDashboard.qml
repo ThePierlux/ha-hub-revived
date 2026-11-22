@@ -689,9 +689,13 @@ Kirigami.ScrollablePage {
 
                                     Layout.fillWidth: true
                                     Layout.minimumWidth: Kirigami.Units.gridUnit * 3
+                                    // The width a tile asks for, in the columns
+                                    // the grid is set to - so the first entry is
+                                    // one tile of the number in "Grid columns",
+                                    // which is the number of them a row holds.
                                     readonly property var sizeOptions: [
-                                        { value: "small", label: Loc.t("1 column") },
-                                        { value: "medium", label: Loc.t("2 columns") },
+                                        { value: "medium", label: Loc.t("1 column") },
+                                        { value: "double", label: Loc.t("2 columns") },
                                         { value: "wide", label: Loc.t("Full width") }
                                     ]
                                     model: sizeOptions
@@ -700,7 +704,7 @@ Kirigami.ScrollablePage {
                                         for (var i = 0; i < sizeOptions.length; i++) {
                                             if (sizeOptions[i].value === tileRowDelegate.modelData.size) return i;
                                         }
-                                        return 1;
+                                        return 0;
                                     }
                                     PlasmaComponents3.ToolTip.visible: hovered
                                     PlasmaComponents3.ToolTip.text: Loc.t("Tile size")
