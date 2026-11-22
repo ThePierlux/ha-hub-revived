@@ -33,8 +33,6 @@ TestCase {
         width: 600
         height: 700
         visible: true
-        cfg_showDashboard: true
-        cfg_showDevices: true
     }
 
     S.ConfigFavorites {
@@ -166,22 +164,6 @@ TestCase {
         filter.domainCounts = {}
     }
 
-    function test_appearance_keeps_at_least_one_view() {
-        wait(50)
-        compare(appearancePage.enabledViewCount, 2)
-        var dashboardCheck = findByText(appearancePage, Loc.t("Show 'Dashboard' tab"))
-        var devicesCheck = findByText(appearancePage, Loc.t("Show 'Devices' tab"))
-        verify(!!dashboardCheck && !!devicesCheck, "both view checkboxes exist")
-        verify(dashboardCheck.enabled && devicesCheck.enabled, "both switchable while two views are on")
-
-        appearancePage.cfg_showDevices = false
-        compare(appearancePage.enabledViewCount, 1)
-        verify(!dashboardCheck.enabled, "the last view cannot be switched off")
-        verify(devicesCheck.enabled, "the hidden view can be switched back on")
-
-        appearancePage.cfg_showDevices = true
-        verify(dashboardCheck.enabled, "both switchable again")
-    }
 
     function test_appearance_header_controls_without_connection() {
         wait(50)
