@@ -9,7 +9,18 @@ Item {
     property var haManager: null
     signal clicked()
 
+    // The icon Settings -> Appearance asks for. Both empty means "follow the
+    // connection", which is also what the fallback modes resolve to.
+    property string preferredIconName: ""
+    property string preferredImagePath: ""
+
     readonly property bool isOnline: haManager && haManager.isConnected
+
+    readonly property string imageSource: {
+        if (compactRoot.preferredImagePath.length === 0) return "";
+        var path = compactRoot.preferredImagePath;
+        return path.indexOf("file:") === 0 ? path : "file://" + path;
+    }
 
     readonly property real sideLength: {
         if (!parent) return Kirigami.Units.iconSizes.medium;
@@ -23,14 +34,40 @@ Item {
     Layout.minimumWidth: Kirigami.Units.iconSizes.small
     Layout.minimumHeight: Kirigami.Units.iconSizes.small
 
+    // The panel asks for a fixed icon size; filling the item instead makes the
+    // glyph jump in size as the panel is resized.
     Kirigami.Icon {
-        anchors.fill: parent
-        anchors.margins: Math.round(compactRoot.sideLength * 0.12)
-        source: Qt.resolvedUrl("../icons/home.svg")
-        isMask: true
+        objectName: "trayThemedIcon"
+        anchors.centerIn: parent
+        visible: compactRoot.imageSource.length === 0
+        source: compactRoot.preferredIconName.length > 0
+            ? compactRoot.preferredIconName
+            : (compactRoot.isOnline ? Qt.resolvedUrl("../icons/home.svg") : "network-offline")
+        isMask: compactRoot.preferredIconName.length > 0
         color: Kirigami.Theme.textColor
-        active: mouse.containsMouse
-        opacity: compactRoot.isOnline ? 1.0 : 0.5
+        implicitWidth: Kirigami.Units.iconSizes.smallMedium
+        implicitHeight: Kirigami.Units.iconSizes.smallMedium
+        opacity: compactRoot.isOnline ? 1.0 : 0.6
+    }
+
+    // A picture cannot be recoloured by the theme, so the offline state is
+    // shown by dimming it the same way.
+    Image {
+        id: pictureImage
+        objectName: "trayPicture"
+        anchors.centerIn: parent
+        // Named so tests can observe the load state: under qmltestrunner no
+        // item ever reports visible == true, so the flag has to be checked.
+        readonly property bool loaded: status === Image.Ready
+        visible: compactRoot.imageSource.length > 0 && loaded
+        source: compactRoot.imageSource
+        sourceSize.width: Kirigami.Units.iconSizes.smallMedium * 2
+        sourceSize.height: Kirigami.Units.iconSizes.smallMedium * 2
+        width: Kirigami.Units.iconSizes.smallMedium
+        height: Kirigami.Units.iconSizes.smallMedium
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+        opacity: compactRoot.isOnline ? 1.0 : 0.6
     }
 
     // Small red dot when disconnected
@@ -46,9 +83,7 @@ Item {
     }
 
     MouseArea {
-        id: mouse
         anchors.fill: parent
-        hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: compactRoot.clicked()
     }

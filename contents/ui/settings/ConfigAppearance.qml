@@ -1,0 +1,245 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls as Controls
+import org.kde.kirigami as Kirigami
+import org.kde.plasma.components 3.0 as PlasmaComponents3
+import "../../services" as Services
+import "../components" as Components
+import "../../code/ha_helpers.mjs" as HAHelpers
+import "../../l10n"
+
+Kirigami.ScrollablePage {
+    id: appearancePage
+    // The page's own heading. Plasma assigns a title of its own when it opens a
+    // page - the category name it read *before* this page's bridge had set the
+    // language, from a copy made while the dialog was still in the system
+    // language - and an assignment breaks the binding, so the heading of the
+    // first page opened kept that language. Re-asserting it here, and whenever
+    // the language moves, puts the right one back.
+    readonly property string pageTitle: Loc.t("Appearance")
+    title: pageTitle
+    onPageTitleChanged: appearancePage.title = appearancePage.pageTitle
+    topPadding: Kirigami.Units.smallSpacing
+
+    // This dialog has its own Loc instance: without the bridge every page here
+    // would stay in the system language no matter what is configured.
+    Components.LanguageBridge {
+        // Handed over where Plasma lets a settings page see the configuration
+        // at all; a page normally cannot, and then the language is saved the
+        // Plasma way - through the cfg_ property and Apply.
+        configuration: (typeof Plasmoid !== "undefined" && Plasmoid && Plasmoid.configuration)
+            ? Plasmoid.configuration : null
+    }
+
+    // cfg_* properties are bound to the kcfg entries by the Plasma 6
+    // configuration backend. Declared values only act as fallback defaults.
+    property string cfg_headerPersonEntityId: ""
+    property string cfg_headerEntityId: ""
+    property bool cfg_headerEntityLabel: false
+    property string cfg_trayIconMode: "auto"
+    property string cfg_trayIconName: ""
+    property string cfg_trayIconPath: ""
+    property string cfg_host: "homeassistant.local"
+    property string cfg_port: "8123"
+    property bool cfg_useSsl: false
+
+    // Only needed to offer entity pickers for the header.
+    Services.HAManager {
+        id: headerManager
+        host: appearancePage.cfg_host
+        port: parseInt(appearancePage.cfg_port) || 8123
+        useSsl: appearancePage.cfg_useSsl
+    }
+
+    // The settings dialog builds its pages up front; connecting a full
+    // WebSocket + entity catalogue for a page the user never opened made the
+    // whole dialog sluggish, so each page connects only once it is actually
+    // shown for the first time.
+    property bool managerStarted: false
+
+    function maybeStartManager() {
+        if (managerStarted) return;
+        managerStarted = true;
+        headerManager.startAutoConnect();
+    }
+
+    Component.onCompleted: {
+        if (visible) maybeStartManager()
+        appearancePage.title = appearancePage.pageTitle
+    }
+    onVisibleChanged: if (visible) maybeStartManager()
+
+    readonly property var personChoice: [{ id: "", name: Loc.t("Auto (first person with a picture)") }]
+        .concat(headerManager.personOptions)
+
+    readonly property string headerPreviewText: {
+        var id = appearancePage.cfg_headerEntityId;
+        if (!headerManager.isConnected || !id) return "";
+        var rev = headerManager.entitiesRevision;
+        return HAHelpers.getEntityHeaderValue(id, headerManager.getEntity(id), headerManager,
+            Loc.language, appearancePage.cfg_headerEntityLabel);
+    }
+
+    readonly property int personIndex: {
+        for (var i = 0; i < personChoice.length; i++) {
+            if (personChoice[i].id === appearancePage.cfg_headerPersonEntityId) return i;
+        }
+        return 0;
+    }
+
+    // Same bound as on the General page, for the same reason: what a form holds
+    // decides how wide it makes itself, and a hint line or a picker asks for
+    // more than the window has.
+    readonly property real formFieldWidth: Math.max(Kirigami.Units.gridUnit * 12,
+        availableWidth - Kirigami.Units.gridUnit * 22)
+
+    ColumnLayout {
+        spacing: Kirigami.Units.largeSpacing
+        width: parent.width
+
+        // Kirigami gives a form the whole width of the space it is put in and
+        // centres the two columns of its content inside that width, so a form as wide
+        // as the page shows its labels and fields somewhere in the middle of the
+        // window. The box is only as wide as the form asks itself to be and stands on
+        // the left, so there is nothing left to centre; in a window narrower than that
+        // the form reflows into one column and the box follows it down.
+
+        // Section headings live outside the forms: Kirigami.FormLayout has no
+        // section concept, and a zero-height placeholder Item inside it made
+        // the following fields overlap (the bug this rewrite fixes).
+        PlasmaComponents3.Label {
+            text: Loc.t("Popup Header:")
+            font.bold: true
+            font.pointSize: Qt.application.font.pointSize * 1.05
+        }
+
+        // Kirigami gives a form the whole width of the space it is put in and
+        // centres the two columns of its content inside that width, so a form as wide
+        // as the page shows its labels and fields somewhere in the middle of the
+        // window. The box is only as wide as the form asks itself to be and stands on
+        // the left, so there is nothing left to centre; in a window narrower than that
+        // the form reflows into one column and the box follows it down.
+        Item {
+            Layout.preferredWidth: Math.min(appearancePage.availableWidth, headerForm.implicitWidth)
+            Layout.preferredHeight: headerForm.implicitHeight
+            Layout.alignment: Qt.AlignLeft
+
+            Kirigami.FormLayout {
+                id: headerForm
+                anchors.fill: parent
+
+                // Combo plus its hint as one real Layout cell: the FormLayout can
+                // measure it, so the label on the left lines up with its centre.
+                ColumnLayout {
+                    Kirigami.FormData.label: Loc.t("User picture:")
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 24
+                    spacing: Kirigami.Units.smallSpacing * 0.6
+
+                    Controls.ComboBox {
+                        id: personCombo
+                        Layout.fillWidth: true
+                        enabled: headerManager.isConnected
+                        model: appearancePage.personChoice
+                        textRole: "name"
+                        currentIndex: appearancePage.personIndex
+                        onActivated: {
+                            var item = model[currentIndex];
+                            appearancePage.cfg_headerPersonEntityId = item ? item.id : "";
+                        }
+                    }
+
+                    PlasmaComponents3.Label {
+                        text: Loc.t("The picture comes from the selected person in Home Assistant. Nothing is shown when that person has no picture.")
+                        font.pointSize: Kirigami.Theme.smallFont.pointSize
+                        color: Kirigami.Theme.disabledTextColor
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+                }
+
+                Components.EntityPickerField {
+                    Kirigami.FormData.label: Loc.t("Value next to greeting:")
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: appearancePage.formFieldWidth
+                    haManager: headerManager
+                    value: appearancePage.cfg_headerEntityId
+                    onEntityPicked: function(entityId) {
+                        appearancePage.cfg_headerEntityId = entityId;
+                    }
+                }
+
+                Controls.CheckBox {
+                    text: Loc.t("Show the entity name in front of the value")
+                    enabled: appearancePage.cfg_headerEntityId.length > 0
+                    checked: appearancePage.cfg_headerEntityLabel
+                    onToggled: appearancePage.cfg_headerEntityLabel = checked
+                }
+
+                PlasmaComponents3.Label {
+                    visible: headerManager.isConnected && appearancePage.cfg_headerEntityId.length > 0
+                    text: Loc.t("Preview") + ": " + appearancePage.headerPreviewText
+                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                    color: Kirigami.Theme.disabledTextColor
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: appearancePage.formFieldWidth
+                }
+
+            }
+        }
+
+        Kirigami.Separator { Layout.fillWidth: true }
+
+        PlasmaComponents3.Label {
+            text: Loc.t("Widget Icon:")
+            font.bold: true
+            font.pointSize: Qt.application.font.pointSize * 1.05
+        }
+
+        // Kirigami gives a form the whole width of the space it is put in and
+        // centres the two columns of its content inside that width, so a form as wide
+        // as the page shows its labels and fields somewhere in the middle of the
+        // window. The box is only as wide as the form asks itself to be and stands on
+        // the left, so there is nothing left to centre; in a window narrower than that
+        // the form reflows into one column and the box follows it down.
+        Item {
+            Layout.preferredWidth: Math.min(appearancePage.availableWidth, trayForm.implicitWidth)
+            Layout.preferredHeight: trayForm.implicitHeight
+            Layout.alignment: Qt.AlignLeft
+
+            Kirigami.FormLayout {
+                id: trayForm
+                anchors.fill: parent
+
+                ColumnLayout {
+                    Kirigami.FormData.label: Loc.t("Panel and tray:")
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 24
+                    spacing: Kirigami.Units.smallSpacing * 0.6
+
+                    Components.IconPickerField {
+                        Layout.fillWidth: true
+                        mode: appearancePage.cfg_trayIconMode
+                        iconName: appearancePage.cfg_trayIconName
+                        iconPath: appearancePage.cfg_trayIconPath
+                        connected: headerManager.isConnected
+                        onIconChanged: {
+                            appearancePage.cfg_trayIconMode = mode;
+                            appearancePage.cfg_trayIconName = iconName;
+                            appearancePage.cfg_trayIconPath = iconPath;
+                        }
+                    }
+
+                    PlasmaComponents3.Label {
+                        text: Loc.t("The custom picture is loaded from its file, so keep it where it will not be deleted.")
+                        font.pointSize: Kirigami.Theme.smallFont.pointSize
+                        color: Kirigami.Theme.disabledTextColor
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+                }
+
+            }
+        }
+    }
+}

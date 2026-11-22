@@ -2,12 +2,26 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import org.kde.kirigami as Kirigami
+import "../../code/ha_helpers.mjs" as HAHelpers
 import "../../l10n"
 Item {
     id: headerView
 
     property var fullRoot: null
     property var haManager: null
+
+    // One entity the user picked to be read off the header (Settings ->
+    // Appearance): a binary sensor, a number, whatever answers. With the label
+    // on, its name is shown as well as its value.
+    property string headerEntityId: ""
+    property bool headerEntityLabel: false
+
+    readonly property string headerEntityText: {
+        if (!connected || headerEntityId.length === 0) return "";
+        return HAHelpers.getEntityHeaderValue(headerEntityId,
+            haManager.getEntity(HAHelpers.cleanEntityId(headerEntityId)),
+            haManager, Loc.language, headerEntityLabel);
+    }
 
     signal configureRequested()
     signal toggleSearchRequested()
@@ -77,6 +91,15 @@ Item {
                 font.weight: Font.Bold
                 elide: Text.ElideRight
                 Layout.fillWidth: true
+            }
+
+            PlasmaComponents3.Label {
+                visible: headerView.headerEntityText.length > 0
+                text: headerView.headerEntityText
+                font.weight: Font.Bold
+                color: Kirigami.Theme.highlightColor
+                elide: Text.ElideRight
+                Layout.alignment: Qt.AlignVCenter
             }
 
             PlasmaComponents3.Label {

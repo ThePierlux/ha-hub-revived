@@ -19,6 +19,10 @@ PlasmaComponents3.Page {
     readonly property int cornerRadius: Plasmoid.configuration.cornerRadius
     readonly property real backgroundOpacity: Plasmoid.configuration.backgroundOpacity / 100
 
+    // Settings -> Appearance: the entity the header reads a value off.
+    readonly property string headerEntityId: Plasmoid.configuration.headerEntityId || ""
+    readonly property bool headerEntityLabel: Plasmoid.configuration.headerEntityLabel || false
+
     signal configureRequested()
 
     // Small minimums: the widget can be shrunk freely on the desktop or in the popup
@@ -79,6 +83,8 @@ PlasmaComponents3.Page {
         visible: fullRoot.activeDetailEntityId.length === 0
         fullRoot: fullRoot
         haManager: fullRoot.haManager
+        headerEntityId: fullRoot.headerEntityId
+        headerEntityLabel: fullRoot.headerEntityLabel
         onConfigureRequested: fullRoot.configureRequested()
         onToggleSearchRequested: fullRoot.showSearchBar = !fullRoot.showSearchBar
         onViewModeSelected: function(mode) { fullRoot.setViewMode(mode); }
