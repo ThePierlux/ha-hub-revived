@@ -90,204 +90,224 @@ Kirigami.ScrollablePage {
         generalSettings.cfg_language = code
     }
 
-    Kirigami.FormLayout {
-        id: formLayout
-        Layout.fillWidth: true
+    // Kirigami lays a page's direct children out itself and gives each of them
+    // the whole width, Layout properties notwithstanding - which is why this
+    // form spread to the window and left its labels far to the left of the
+    // fields they belong to. A layout of our own is what makes a width claim
+    // mean anything, and the box inside it is what limits the form: Kirigami
+    // gives a form the whole width of the space it is put in and spends the
+    // slack on the label column. The box is only as wide as the form asks to be
+    // and stands on the left, so there is nothing to spend; in a window
+    // narrower than that the form reflows into one column and the box follows.
+    ColumnLayout {
+        width: parent.width
+        spacing: Kirigami.Units.largeSpacing
 
-        Kirigami.Separator {
-            Kirigami.FormData.label: Loc.t("Home Assistant connection")
-            Kirigami.FormData.isSection: true
-        }
+        Item {
+            Layout.preferredWidth: Math.min(generalSettings.availableWidth, formLayout.implicitWidth)
+            Layout.preferredHeight: formLayout.implicitHeight
+            Layout.alignment: Qt.AlignLeft
 
-        Controls.TextField {
-            id: hostField
-            Kirigami.FormData.label: Loc.t("Home Assistant host / IP:")
-            placeholderText: "homeassistant.local or 192.168.1.100"
-            text: generalSettings.cfg_host
-            Layout.fillWidth: true
-            onTextEdited: generalSettings.cfg_host = text
-        }
+            Kirigami.FormLayout {
+                id: formLayout
+                anchors.fill: parent
 
-        Controls.TextField {
-            id: portField
-            Kirigami.FormData.label: Loc.t("Port:")
-            placeholderText: "8123"
-            text: generalSettings.cfg_port
-            inputMethodHints: Qt.ImhDigitsOnly
-            onTextEdited: generalSettings.cfg_port = text
-        }
-
-        Controls.CheckBox {
-            id: sslCheckBox
-            Kirigami.FormData.label: Loc.t("Secure connection:")
-            text: Loc.t("Use wss:// (HTTPS)")
-            checked: generalSettings.cfg_useSsl
-            onToggled: generalSettings.cfg_useSsl = checked
-        }
-
-        Controls.TextField {
-            id: tokenField
-            Kirigami.FormData.label: Loc.t("Long-lived access token:")
-            placeholderText: Loc.t("Long-lived token (Profile → Security in Home Assistant)")
-            text: generalSettings.cfg_accessToken
-            echoMode: TextInput.Password
-            Layout.fillWidth: true
-            onTextEdited: generalSettings.cfg_accessToken = text
-        }
-
-        Controls.CheckBox {
-            id: autoConnectCheckBox
-            Kirigami.FormData.label: Loc.t("Auto Connect:")
-            text: Loc.t("Connect on startup")
-            checked: generalSettings.cfg_autoConnect
-            onToggled: generalSettings.cfg_autoConnect = checked
-        }
-
-        Controls.ComboBox {
-            id: languageCombo
-            objectName: "languageCombo"
-            Kirigami.FormData.label: Loc.t("Language:")
-            Layout.fillWidth: true
-
-            // The model carries only what never changes: the codes and the names
-            // each language writes about itself. A translated string inside the
-            // model would rebuild the model at the very moment the language
-            // changes (the picker retranslates as it picks), and the control
-            // resets its currentIndex when the model is swapped.
-            readonly property var entries: [{ code: "system" }].concat(Loc.languages)
-            readonly property string systemLabel: Loc.t("System language")
-            model: entries
-            textRole: "code"
-
-            function labelFor(code) {
-                if (code === "system") return languageCombo.systemLabel
-                var langs = Loc.languages
-                for (var i = 0; i < langs.length; ++i) {
-                    if (langs[i].code === code) return langs[i].label
-                }
-                return code
-            }
-            function indexForCode(code) {
-                for (var i = 0; i < entries.length; ++i) {
-                    if (entries[i].code === code) return i
-                }
-                return 0
+            Kirigami.Separator {
+                Kirigami.FormData.label: Loc.t("Home Assistant connection")
+                Kirigami.FormData.isSection: true
             }
 
-            currentIndex: indexForCode(generalSettings.cfg_language)
-            // Translated on its own, so switching language retranslates the button
-            // and the list without touching the model.
-            displayText: currentIndex >= 0 && currentIndex < entries.length
-                ? languageCombo.labelFor(entries[currentIndex].code) : ""
-
-            delegate: Controls.ItemDelegate {
-                required property var modelData
-                required property int index
-                width: languageCombo.width
-                text: languageCombo.labelFor(modelData.code)
-                highlighted: languageCombo.highlightedIndex === index
-                onClicked: {
-                    languageCombo.currentIndex = index
-                    languageCombo.popup.dismiss()
-                    generalSettings.selectLanguage(modelData.code)
-                }
-            }
-
-            // Keyboard navigation in the popup ends here instead of in a delegate
-            // click. selectLanguage ignores a pick of the language already set.
-            onActivated: (index) => generalSettings.selectLanguage(entries[index].code)
-        }
-
-        Controls.Label {
-            text: Loc.t("Apply to keep this language after closing the settings.")
-            font: Kirigami.Theme.smallFont
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
-            Layout.maximumWidth: Kirigami.Units.gridUnit * 22
-        }
-
-        Kirigami.Separator {
-            Kirigami.FormData.label: Loc.t("Appearance")
-            Kirigami.FormData.isSection: true
-        }
-
-        Controls.ComboBox {
-            id: viewModeBox
-            Kirigami.FormData.label: Loc.t("Default view:")
-            model: [
-                { text: Loc.t("Rows"), value: "rows" },
-                { text: Loc.t("Tiles"), value: "tiles" },
-                { text: Loc.t("Cards (Liquid Glass)"), value: "cards" },
-                { text: Loc.t("Dashboard"), value: "metro" }
-            ]
-            textRole: "text"
-            valueRole: "value"
-            currentIndex: {
-                if (generalSettings.cfg_viewMode === "tiles") return 1;
-                if (generalSettings.cfg_viewMode === "cards") return 2;
-                if (generalSettings.cfg_viewMode === "metro") return 3;
-                return 0;
-            }
-            onActivated: {
-                generalSettings.cfg_viewMode = model[currentIndex].value;
-            }
-        }
-
-        RowLayout {
-            Kirigami.FormData.label: Loc.t("Corner radius:")
-            spacing: Kirigami.Units.smallSpacing
-
-            Controls.Slider {
+            Controls.TextField {
+                id: hostField
+                Kirigami.FormData.label: Loc.t("Home Assistant host / IP:")
+                placeholderText: "homeassistant.local or 192.168.1.100"
+                text: generalSettings.cfg_host
                 Layout.fillWidth: true
-                Layout.minimumWidth: Kirigami.Units.gridUnit * 8
-                from: 0
-                to: 32
-                stepSize: 1
-                value: generalSettings.cfg_cornerRadius
-                onMoved: generalSettings.cfg_cornerRadius = Math.round(value)
+                onTextEdited: generalSettings.cfg_host = text
             }
-            Controls.SpinBox {
-                from: 0
-                to: 32
-                value: generalSettings.cfg_cornerRadius
-                textFromValue: function(v) { return v + " px"; }
-                valueFromText: function(t) { return parseInt(t); }
-                onValueModified: generalSettings.cfg_cornerRadius = value
+
+            Controls.TextField {
+                id: portField
+                Kirigami.FormData.label: Loc.t("Port:")
+                placeholderText: "8123"
+                text: generalSettings.cfg_port
+                inputMethodHints: Qt.ImhDigitsOnly
+                onTextEdited: generalSettings.cfg_port = text
             }
-        }
 
-        RowLayout {
-            Kirigami.FormData.label: Loc.t("Background opacity:")
-            spacing: Kirigami.Units.smallSpacing
+            Controls.CheckBox {
+                id: sslCheckBox
+                Kirigami.FormData.label: Loc.t("Secure connection:")
+                text: Loc.t("Use wss:// (HTTPS)")
+                checked: generalSettings.cfg_useSsl
+                onToggled: generalSettings.cfg_useSsl = checked
+            }
 
-            Controls.Slider {
+            Controls.TextField {
+                id: tokenField
+                Kirigami.FormData.label: Loc.t("Long-lived access token:")
+                placeholderText: Loc.t("Long-lived token (Profile → Security in Home Assistant)")
+                text: generalSettings.cfg_accessToken
+                echoMode: TextInput.Password
                 Layout.fillWidth: true
-                Layout.minimumWidth: Kirigami.Units.gridUnit * 8
-                from: 0
-                to: 100
-                stepSize: 5
-                value: generalSettings.cfg_backgroundOpacity
-                onMoved: generalSettings.cfg_backgroundOpacity = Math.round(value)
+                onTextEdited: generalSettings.cfg_accessToken = text
             }
-            Controls.SpinBox {
-                from: 0
-                to: 100
-                stepSize: 5
-                value: generalSettings.cfg_backgroundOpacity
-                textFromValue: function(v) { return v + " %"; }
-                valueFromText: function(t) { return parseInt(t); }
-                onValueModified: generalSettings.cfg_backgroundOpacity = value
-            }
-        }
 
-        Controls.Label {
-            text: Loc.t("Corner radius and opacity apply when the widget is on the desktop; in a panel, Plasma draws the popup frame. Colors always follow the system theme.")
-            wrapMode: Text.WordWrap
-            font: Kirigami.Theme.smallFont
-            opacity: 0.7
-            Layout.fillWidth: true
-            Layout.maximumWidth: Kirigami.Units.gridUnit * 22
+            Controls.CheckBox {
+                id: autoConnectCheckBox
+                Kirigami.FormData.label: Loc.t("Auto Connect:")
+                text: Loc.t("Connect on startup")
+                checked: generalSettings.cfg_autoConnect
+                onToggled: generalSettings.cfg_autoConnect = checked
+            }
+
+            Controls.ComboBox {
+                id: languageCombo
+                objectName: "languageCombo"
+                Kirigami.FormData.label: Loc.t("Language:")
+                Layout.fillWidth: true
+
+                // The model carries only what never changes: the codes and the names
+                // each language writes about itself. A translated string inside the
+                // model would rebuild the model at the very moment the language
+                // changes (the picker retranslates as it picks), and the control
+                // resets its currentIndex when the model is swapped.
+                readonly property var entries: [{ code: "system" }].concat(Loc.languages)
+                readonly property string systemLabel: Loc.t("System language")
+                model: entries
+                textRole: "code"
+
+                function labelFor(code) {
+                    if (code === "system") return languageCombo.systemLabel
+                    var langs = Loc.languages
+                    for (var i = 0; i < langs.length; ++i) {
+                        if (langs[i].code === code) return langs[i].label
+                    }
+                    return code
+                }
+                function indexForCode(code) {
+                    for (var i = 0; i < entries.length; ++i) {
+                        if (entries[i].code === code) return i
+                    }
+                    return 0
+                }
+
+                currentIndex: indexForCode(generalSettings.cfg_language)
+                // Translated on its own, so switching language retranslates the button
+                // and the list without touching the model.
+                displayText: currentIndex >= 0 && currentIndex < entries.length
+                    ? languageCombo.labelFor(entries[currentIndex].code) : ""
+
+                delegate: Controls.ItemDelegate {
+                    required property var modelData
+                    required property int index
+                    width: languageCombo.width
+                    text: languageCombo.labelFor(modelData.code)
+                    highlighted: languageCombo.highlightedIndex === index
+                    onClicked: {
+                        languageCombo.currentIndex = index
+                        languageCombo.popup.dismiss()
+                        generalSettings.selectLanguage(modelData.code)
+                    }
+                }
+
+                // Keyboard navigation in the popup ends here instead of in a delegate
+                // click. selectLanguage ignores a pick of the language already set.
+                onActivated: (index) => generalSettings.selectLanguage(entries[index].code)
+            }
+
+            Controls.Label {
+                text: Loc.t("Apply to keep this language after closing the settings.")
+                font: Kirigami.Theme.smallFont
+                color: Kirigami.Theme.disabledTextColor
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+                Layout.maximumWidth: Kirigami.Units.gridUnit * 22
+            }
+
+            Kirigami.Separator {
+                Kirigami.FormData.label: Loc.t("Appearance")
+                Kirigami.FormData.isSection: true
+            }
+
+            Controls.ComboBox {
+                id: viewModeBox
+                Kirigami.FormData.label: Loc.t("Default view:")
+                model: [
+                    { text: Loc.t("Rows"), value: "rows" },
+                    { text: Loc.t("Tiles"), value: "tiles" },
+                    { text: Loc.t("Cards (Liquid Glass)"), value: "cards" },
+                    { text: Loc.t("Dashboard"), value: "metro" }
+                ]
+                textRole: "text"
+                valueRole: "value"
+                currentIndex: {
+                    if (generalSettings.cfg_viewMode === "tiles") return 1;
+                    if (generalSettings.cfg_viewMode === "cards") return 2;
+                    if (generalSettings.cfg_viewMode === "metro") return 3;
+                    return 0;
+                }
+                onActivated: {
+                    generalSettings.cfg_viewMode = model[currentIndex].value;
+                }
+            }
+
+            RowLayout {
+                Kirigami.FormData.label: Loc.t("Corner radius:")
+                spacing: Kirigami.Units.smallSpacing
+
+                Controls.Slider {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: Kirigami.Units.gridUnit * 8
+                    from: 0
+                    to: 32
+                    stepSize: 1
+                    value: generalSettings.cfg_cornerRadius
+                    onMoved: generalSettings.cfg_cornerRadius = Math.round(value)
+                }
+                Controls.SpinBox {
+                    from: 0
+                    to: 32
+                    value: generalSettings.cfg_cornerRadius
+                    textFromValue: function(v) { return v + " px"; }
+                    valueFromText: function(t) { return parseInt(t); }
+                    onValueModified: generalSettings.cfg_cornerRadius = value
+                }
+            }
+
+            RowLayout {
+                Kirigami.FormData.label: Loc.t("Background opacity:")
+                spacing: Kirigami.Units.smallSpacing
+
+                Controls.Slider {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: Kirigami.Units.gridUnit * 8
+                    from: 0
+                    to: 100
+                    stepSize: 5
+                    value: generalSettings.cfg_backgroundOpacity
+                    onMoved: generalSettings.cfg_backgroundOpacity = Math.round(value)
+                }
+                Controls.SpinBox {
+                    from: 0
+                    to: 100
+                    stepSize: 5
+                    value: generalSettings.cfg_backgroundOpacity
+                    textFromValue: function(v) { return v + " %"; }
+                    valueFromText: function(t) { return parseInt(t); }
+                    onValueModified: generalSettings.cfg_backgroundOpacity = value
+                }
+            }
+
+            Controls.Label {
+                text: Loc.t("Corner radius and opacity apply when the widget is on the desktop; in a panel, Plasma draws the popup frame. Colors always follow the system theme.")
+                wrapMode: Text.WordWrap
+                font: Kirigami.Theme.smallFont
+                opacity: 0.7
+                Layout.fillWidth: true
+                Layout.maximumWidth: Kirigami.Units.gridUnit * 22
+            }
+            }
         }
     }
 }
