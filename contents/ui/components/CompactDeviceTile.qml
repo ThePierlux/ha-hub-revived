@@ -56,15 +56,15 @@ PlasmaComponents3.ItemDelegate {
     contentItem: RowLayout {
         spacing: Kirigami.Units.smallSpacing * 1.5
 
-        EntityIcon {
-            source: ent.iconUrl
+        EntityBadge {
+            iconKind: ent.icon.kind
+            icon: ent.icon.name
             active: ent.isOn
             unavailable: ent.isUnavailable
             interactive: ent.isToggleable || ent.isActionable || ent.hasQuickToggle
             onClicked: ent.toggle()
             PlasmaComponents3.ToolTip.text: ent.isToggleable ? (ent.isOn ? Loc.t("Turn off") : Loc.t("Turn on")) : (ent.isActionable ? Loc.t("Run") : ent.quickToggleTooltip)
-            PlasmaComponents3.ToolTip.visible: interactive && hoveredIcon.hovered
-            HoverHandler { id: hoveredIcon }
+            PlasmaComponents3.ToolTip.visible: interactive && hovered
         }
 
         ColumnLayout {

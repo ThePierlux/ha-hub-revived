@@ -40,8 +40,9 @@ PlasmaComponents3.ItemDelegate {
     contentItem: RowLayout {
         spacing: Kirigami.Units.smallSpacing * 1.5
 
-        EntityIcon {
-            source: ent.iconUrl
+        EntityBadge {
+            iconKind: ent.icon.kind
+            icon: ent.icon.name
             active: ent.isOn
             unavailable: ent.isUnavailable
             interactive: ent.isToggleable || ent.isActionable || ent.hasQuickToggle

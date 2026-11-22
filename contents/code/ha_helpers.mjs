@@ -342,13 +342,18 @@ function getDomainIcon(domain) {
     return DOMAIN_ICONS[domain] || "preferences-system-symbolic";
 }
 
-// Where an entity's own icon should be drawn from. Home Assistant stores it as
-// a Material Design Icons name ("mdi:ceiling-light"), which the Plasma icon
-// theme cannot resolve, so those are drawn from the bundled MDI font by name;
-// a plain icon theme name is passed through, and anything else - no icon, an
-// icon set we do not ship (phu:, hass:), an MDI name the font lacks - falls
-// back to the domain icon. Returns { kind: "mdi" | "theme", name }.
-function resolveEntityIcon(rawIcon, domain) {
+// Where an entity's own icon should be drawn from, as { kind, name }:
+//   mdi    a Material Design Icons name ("mdi:ceiling-light"). Home Assistant
+//          stores icons this way and the Plasma icon theme has no such names,
+//          so it is drawn from the bundled MDI font - which is what shows the
+//          very icon the user picked in Home Assistant.
+//   theme  an icon theme name, passed to the theme as it is.
+//   asset  one of the files this widget bundles under contents/icons.
+// Anything that is neither - no icon at all, an icon set we do not ship
+// (phu:, hass:), an MDI name the font does not carry - is the domain's own
+// icon, and the domain's own icon is one of ours: the bundled set covers every
+// domain the widget lists, so an entity is never left without a glyph.
+function resolveEntityIcon(rawIcon, domain, state, attributes) {
     var icon = rawIcon ? rawIcon.toString().trim() : "";
     if (icon.indexOf("mdi:") === 0) {
         var name = icon.substring(4).trim().toLowerCase();
@@ -356,7 +361,7 @@ function resolveEntityIcon(rawIcon, domain) {
     } else if (icon.length > 0 && icon.indexOf(":") === -1) {
         return { kind: "theme", name: icon };
     }
-    return { kind: "theme", name: getDomainIcon(domain) };
+    return { kind: "asset", name: getDomainAssetIcon(domain, state, attributes) };
 }
 
 function getBinarySensorIcon(deviceClass, isOn) {
