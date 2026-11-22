@@ -27,7 +27,7 @@ commits rather than dropped in as a blob — see `CHANGELOG.md` for the whole li
   language cannot ship half-done, because the test suite refuses it.
 - **The Metro dashboard** as a fourth view, with grouped coloured tiles and its own settings page.
 - **Home Assistant's own entity icons**, drawn from the bundled Material Design Icons font.
-- **History, the logbook and every channel** of a multi-gang or LocalTuya device.
+- **History and every channel** of a multi-gang or LocalTuya device.
 - **Names of your own**, a person for the header to greet, and a tray icon of your choosing.
 - **CI and tests**: every WebSocket payload, every language, every settings page's structure.
 
@@ -68,7 +68,7 @@ commits rather than dropped in as a blob — see `CHANGELOG.md` for the whole li
   own width back into the tiles. "Grid columns" counts tiles in a row, not cells in a grid.
 - **The icon Home Assistant names.** Material Design Icons is bundled, so an entity given a light in
   Home Assistant shows that light; entities with no icon of their own keep the widget's own set.
-- **History and the logbook** on the device page, and every channel of a multi-gang or LocalTuya
+- **History** on the device page, and every channel of a multi-gang or LocalTuya
   device, not just its "primary" entity.
 - **Names of your own:** rename any entity in the widget and the name is used everywhere it appears.
 - **A person to greet,** one entity whose value the header reads, and a tray icon of your choosing —
@@ -127,7 +127,7 @@ Build the `.plasmoid` archive with `./scripts/make-plasmoid.sh`.
   repository.
 - **Fork maintainer:** [ThePierlux](https://github.com/ThePierlux).
 - **2.1:** [Sergey Alexeyev](https://github.com/s-n-alexeyev) — the language layer, the Metro
-  dashboard, the entity icons, history and the logbook, multi-channel devices, the aliases and
+  dashboard, the entity icons, history, multi-channel devices, the aliases and
   the settings pages, contributed as a pull request and ported into this fork's architecture.
 - **AI-assisted development:** the 2.0 rework (connection fixes, new views, icons,
   performance work, translations) was written with **Claude** (Anthropic, Claude Opus 5.5

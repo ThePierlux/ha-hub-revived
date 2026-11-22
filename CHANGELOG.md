@@ -9,9 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 The Home Assistant feature set Sergey Alexeyev built on top of this fork's 2.0
 architecture, ported commit by commit: languages, Home Assistant's own entity
-icons, the Metro dashboard, history and the logbook, multi-channel devices,
-names of your own, a settings page for the look of it — and the tests that keep
-each of those honest.
+icons, the Metro dashboard, history, multi-channel devices, names of your own, a
+settings page for the look of it — and the tests that keep each of those honest.
+The presentation came over; the connection layer stayed this fork's, which is
+where the access token lives (see Fixed).
 
 ### Added
 - The widget speaks 32 languages in all: 31 catalogs, one file each under
@@ -41,9 +42,8 @@ each of those honest.
   Dashboard), and the name is used everywhere the entity appears — the list, the
   tiles, the cards, the pickers — because every view asks the manager for the
   name rather than computing one.
-- **History and the logbook** on the device page: the last three days of an
-  entity's states and the events around them, asked over the same socket the
-  widget already holds.
+- **History** on the device page: the last three days of an entity's states,
+  asked over the same socket the widget already holds.
 - **Multi-channel devices are usable**: a multi-gang switch, a LocalTuya plug,
   a tunable-white lamp — anything with several controllable entities behind one
   name — lists those channels on its page instead of showing one "primary"
@@ -53,11 +53,13 @@ each of those honest.
 - The header greets the person Home Assistant says is home, and wears their
   picture if they have one. Without a person chosen, it says what the server is
   called, as before.
-- The connection layer is one file again, with the best of both: Home
-  Assistant's registries and the entity catalog (areas, floors, labels, hidden
-  and diagnostic flags, per-entity titles) from 1.3.1, and the widget's own
-  active ping every 25 s and tab lists that are rebuilt only when the set of
-  entities moves.
+- One answer for what an entity is called. The manager builds a catalog from the
+  three registries it already fetches — states, devices, areas — and every view
+  asks it: title, domain, device, area, hidden and diagnostic flags. Floors and
+  labels are not asked for; this widget's lists have no room for them, so the
+  requests and the wording 1.3.1 carried for them are not carried here either.
+  The lists and the catalog are rebuilt together, once a burst of updates, and
+  the entity names you gave are part of that pass.
 
 ### Changed
 - The connection is proved live by asking: an active ping every 25 s replaces
@@ -83,6 +85,15 @@ each of those honest.
   spanned the row still does, and a half-width tile is now exactly one column.
 
 ### Fixed
+- **The access token is kept where it was typed.** The 1.3.1 connection layer kept
+  the token in a LocalStorage database of its own and emptied the entry in the
+  widget's configuration as soon as that write was acknowledged. In a QML applet on
+  Plasma 6 that database never appears on disk — so the token lived only in memory:
+  the widget connected until `plasmashell` restarted, and after that it had nothing
+  to answer `auth_invalid` with, in the popup and in the settings page alike. The
+  configuration is the token's home again, the shared database stays a copy a second
+  instance may read, and `tests/js/token_storage.test.js` fails on any line that
+  blanks either copy. A token lost that way has to be pasted once more.
 - The fields of the General page in a wide settings window: Kirigami stretches a
   page's form to the window and spends the slack on the label column, so the
   fields stood a third of the way across with their labels trailing behind them.
