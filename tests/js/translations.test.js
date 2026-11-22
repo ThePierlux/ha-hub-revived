@@ -6,6 +6,7 @@ const assert = require("node:assert/strict");
 const ROOT = path.join(__dirname, "..", "..");
 const { loadLibrary } = require("./load-library.js");
 const L10N = loadLibrary("contents/l10n/translations.mjs");
+const CARRIED = require("./carried-keys.js");
 const TARGET_LANGUAGES = L10N.LANGUAGES.map((l) => l.code).filter((c) => c !== "en");
 
 function walk(dir, out = []) {
@@ -85,20 +86,30 @@ test("the words the helpers look up by name are translated too", () => {
     }
 });
 
-// The other direction: a key nothing asks for is a translation that nobody
-// will ever read, and it keeps quietly "translated" while the string it used to
+// The other direction: a key nothing asks for is a translation that nobody will
+// ever read, and it keeps quietly "translated" while the string it used to
 // render is gone from the UI.
 //
-// Skipped on this branch for as long as it is half-merged: the catalogs came
-// over with the strings of the Metro dashboard and the Appearance page, which
-// land in later commits, so every one of these orphans is a call site on its
-// way rather than a dead one. Un-skip once those views are here.
-test.skip("no catalog holds a key the code stopped asking for", () => {
-    const reachable = new Set([...uiKeys(), ...DYNAMIC_KEYS, ...[...L10N.EXTERNAL_KEYS]]);
+// This branch carries some of those on purpose - the catalogs came over whole
+// from 1.3.1 while this fork kept its own popup and settings wording - so they
+// are named in tests/js/carried-keys.js. The comparison goes both ways: a dead
+// key that is not on the list fails, and a listed key the code has started to
+// ask for fails as well, so the list cannot rot.
+test("no catalog holds a key the code stopped asking for", () => {
+    const carried = Object.values(CARRIED).flat();
+    assert.ok(carried.length > 0);
+    assert.equal(new Set(carried).size, carried.length, "a key is listed twice");
+
+    const reachable = new Set([...uiKeys(), ...DYNAMIC_KEYS, ...[...L10N.EXTERNAL_KEYS], ...carried]);
     for (const lang of TARGET_LANGUAGES) {
         const unreachable = Object.keys(L10N.CATALOGS[lang]).filter((k) => !reachable.has(k)).sort();
         assert.deepEqual(unreachable, [], `${lang} translates ${unreachable.length} unused key(s)`);
     }
+
+    // And back: nothing on the list is asked for any more.
+    const asked = new Set([...uiKeys(), ...DYNAMIC_KEYS, ...[...L10N.EXTERNAL_KEYS]]);
+    const stale = carried.filter((k) => asked.has(k)).sort();
+    assert.deepEqual(stale, [], "these keys have call sites again; drop them from carried-keys.js");
 });
 
 test("all languages share the same key set", () => {
