@@ -16,14 +16,27 @@ Item {
     property string headerEntityId: ""
     property bool headerEntityLabel: false
 
+    // The person picked in Settings -> Appearance, greeted by the hour. Empty
+    // without a person: the header then says what the server is called, which
+    // is the more useful of the two answers when nobody was chosen.
     readonly property string greetingText: {
-        if (!connected || !fullRoot || fullRoot.greetingText === undefined) return "";
-        return fullRoot.greetingText || "";
+        var who = connected && haManager ? (haManager.primaryPersonName || "") : "";
+        if (who.length === 0) return "";
+        var hour = new Date().getHours();
+        var greeting = Loc.t("Welcome");
+        if (hour >= 5 && hour < 12) greeting = Loc.t("Good morning");
+        else if (hour >= 12 && hour < 18) greeting = Loc.t("Good afternoon");
+        else if (hour >= 18 && hour < 23) greeting = Loc.t("Good evening");
+        else greeting = Loc.t("Good night");
+        return greeting + ", " + who + "!";
     }
 
     // What the server is called, where it still fits: on the title line while
     // nobody is being greeted, next to the count once a greeting has taken it.
     readonly property bool greetingInTitle: headerView.greetingText.length > 0
+
+    readonly property string personName: connected && haManager ? (haManager.primaryPersonName || "") : ""
+    readonly property string pictureUrl: connected && haManager ? (haManager.primaryPersonPictureUrl || "") : ""
 
     readonly property string headerEntityText: {
         if (!connected || headerEntityId.length === 0) return "";
@@ -90,6 +103,18 @@ Item {
             }
         }
 
+        // A picture of who is being greeted earns its space more easily than
+        // the word that greets them, so it sits beside the status dot rather
+        // than in the text.
+        Kirigami.Avatar {
+            visible: headerView.personName.length > 0 || headerView.pictureUrl.length > 0
+            name: headerView.personName
+            source: headerView.pictureUrl
+            implicitWidth: Kirigami.Units.iconSizes.smallMedium
+            implicitHeight: Kirigami.Units.iconSizes.smallMedium
+            Layout.alignment: Qt.AlignVCenter
+        }
+
         ColumnLayout {
             spacing: 0
             Layout.fillWidth: true
@@ -126,10 +151,12 @@ Item {
                     // rule of its own per language is not modelled here.
                     var n = haManager.entityCount;
                     var count = Loc.t(n === 1 ? "%1 entity" : "%1 entities", n);
+                    // The greeting took the title line, so the server's name
+                    // comes down here; otherwise the connection says what it is.
                     if (headerView.greetingInTitle && haManager.serverName) {
                         return haManager.serverName + " \u00b7 " + count;
                     }
-                    return count;
+                    return Loc.t("Connected") + " \u00b7 " + count;
                 }
                 font: Kirigami.Theme.smallFont
                 color: headerView.connected ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.negativeTextColor

@@ -24,21 +24,6 @@ PlasmaComponents3.Page {
     readonly property string headerEntityId: Plasmoid.configuration.headerEntityId || ""
     readonly property bool headerEntityLabel: Plasmoid.configuration.headerEntityLabel || false
 
-    // The person picked in Settings -> Appearance, greeted by the hour. Empty
-    // without a person: the header then says what the server is called, which
-    // is the more useful of the two answers when nobody was chosen.
-    readonly property string greetingText: {
-        var who = haManager && haManager.isConnected ? (haManager.primaryPersonName || "") : "";
-        if (who.length === 0) return "";
-        var hour = new Date().getHours();
-        var greeting = Loc.t("Welcome");
-        if (hour >= 5 && hour < 12) greeting = Loc.t("Good morning");
-        else if (hour >= 12 && hour < 18) greeting = Loc.t("Good afternoon");
-        else if (hour >= 18 && hour < 23) greeting = Loc.t("Good evening");
-        else greeting = Loc.t("Good night");
-        return greeting + ", " + who + "!";
-    }
-
     signal configureRequested()
 
     // Small minimums: the widget can be shrunk freely on the desktop or in the popup
