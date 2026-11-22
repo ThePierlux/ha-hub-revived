@@ -75,6 +75,30 @@ each of those honest.
   language repeated the previous message.
 - The default host of a fresh setup is `homeassistant.local`, the name Home
   Assistant publishes itself, instead of an address nobody has typed yet.
+- **Grid columns mean columns.** Settings → Dashboard's "Grid columns: 4" stands
+  four ordinary tiles in a row. It used to count half-width cells, and since every
+  tile asked for two of them, both 4 and 5 showed two tiles and a gap nobody had
+  chosen. The size menu keeps its three answers — one column, two columns, the
+  whole row — and a dashboard arranged in an older build keeps its widths: what
+  spanned the row still does, and a half-width tile is now exactly one column.
+
+### Fixed
+- The fields of the General page in a wide settings window: Kirigami stretches a
+  page's form to the window and spends the slack on the label column, so the
+  fields stood a third of the way across with their labels trailing behind them.
+  The form takes the width its own fields ask for now, as Appearance and Dashboard
+  already did.
+- One entity read as `1 entity` whatever the language was. The header chose between
+  the singular and the plural *inside* the call, and a key hidden in an expression
+  is a key no test can see being asked for, so no catalog had ever been required to
+  carry it. Both calls are literals now, and the 31 catalogs have the singular —
+  which is also the form Slavic languages get right for one, where the plural entry
+  holds the form for five.
+- A test file that had never run: `tests/qml/tst_entity_icon.qml` had a closing
+  brace in the middle of it, so the file did not compile and none of its cases
+  executed, passing as silently as failing. The suite is run here now —
+  `tests/run_qml_tests.sh` finds Qt 6's `qmltestrunner` under `/usr/lib64`, where
+  Arch and its derivatives put it — and the QML cases report 95 of them.
 
 ## [2.0.1] - 2026-11-19
 

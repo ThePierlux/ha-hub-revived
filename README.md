@@ -65,7 +65,7 @@ commits rather than dropped in as a blob — see `CHANGELOG.md` for the whole li
 **Home Assistant**
 - **Metro dashboard** — a fourth view beside rows, tiles and cards: flat coloured tiles, grouped and
   coloured by whoever arranges them, sized by the width of the popup alone so the grid cannot feed its
-  own width back into the tiles.
+  own width back into the tiles. "Grid columns" counts tiles in a row, not cells in a grid.
 - **The icon Home Assistant names.** Material Design Icons is bundled, so an entity given a light in
   Home Assistant shows that light; entities with no icon of their own keep the widget's own set.
 - **History and the logbook** on the device page, and every channel of a multi-gang or LocalTuya
