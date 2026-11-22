@@ -133,6 +133,40 @@ TestCase {
         compare(saved().length, 1)
     }
 
+    function test_3_dashboard_picker_offers_every_channel_of_a_device() {
+        // The page keeps a manager of its own, so this is what a connection
+        // leaves behind: a two-gang switch on one device, and an entity with no
+        // device of its own. The picker used to be built one row per device, so
+        // only the switch's primary gang could be placed on the dashboard.
+        var m = dashboardPage.managerRef
+        m.isConnected = true
+        m.entities = {
+            "switch.gang_1": { entity_id: "switch.gang_1", state: "on", attributes: { friendly_name: "Kitchen 1" } },
+            "switch.gang_2": { entity_id: "switch.gang_2", state: "off", attributes: { friendly_name: "Kitchen 2" } },
+            "sensor.attic": { entity_id: "sensor.attic", state: "18", attributes: { friendly_name: "Attic" } }
+        };
+        m.devicesList = [{ id: "dev_gang", name: "Kitchen switch", name_by_user: null, area_id: "" }]
+        m._deviceById = { "dev_gang": { id: "dev_gang", name: "Kitchen switch", name_by_user: null, area_id: "" } }
+        m.entityToDeviceMap = { "switch.gang_1": "dev_gang", "switch.gang_2": "dev_gang" }
+        m.deviceToEntitiesMap = { "dev_gang": ["switch.gang_1", "switch.gang_2"] }
+        m.entityRegistryMap = {}
+        m.entityToAreaMap = {}
+        m.areasList = []
+        m._listsDirty = true
+        m._buildCatalog()
+        m._buildCategorizedLists()
+        m.entitiesRevision++
+
+        verify(dashboardPage.candidateEntities.indexOf("switch.gang_1") !== -1, "the first gang")
+        verify(dashboardPage.candidateEntities.indexOf("switch.gang_2") !== -1, "the second gang")
+        verify(dashboardPage.candidateEntities.indexOf("sensor.attic") !== -1, "an entity with no device")
+        compare(dashboardPage.availableEntities.length, 3)
+        // The chips count what there is to pick, so the domain says two.
+        compare(dashboardPage.domainCounts["switch"], 2)
+
+        m.isConnected = false
+    }
+
     function test_favorites_page_renders_without_connection() {
         wait(150)
         compare(favoritesPage.filteredAllEntitiesList.length, 0)

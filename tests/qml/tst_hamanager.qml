@@ -76,6 +76,26 @@ TestCase {
         verify(first.name !== second.name, "the two channels are told apart")
     }
 
+    function test_the_picker_list_holds_every_channel_and_not_one_per_device() {
+        // The dashboard and the Favorites page place and favourite entities, so
+        // a list with one row per device hid the second gang of a switch: the
+        // user could see both channels in the popup and pick only one.
+        manager._listsDirty = true
+        manager._buildCategorizedLists()
+
+        verify(manager.userDevicesList.indexOf("switch.gang_1") !== -1)
+        verify(manager.userDevicesList.indexOf("switch.gang_2") !== -1)
+        verify(manager.userDevicesList.indexOf("sensor.temperature") !== -1,
+               "an entity whose device is unknown is pickable too")
+        compare(manager.userDevicesList.length, manager.allEntitiesList.length)
+
+        // A page is free to sort the list it is handed; the popup's own list
+        // must not move because of it.
+        var popupOrder = manager.allEntitiesList.slice()
+        manager.userDevicesList.reverse()
+        compare(manager.allEntitiesList, popupOrder)
+    }
+
     function test_standalone_entities_have_neither_device_nor_area() {
         var entries = ["switch.template_switch", "light.standalone"]
         for (var i = 0; i < entries.length; i++) {
@@ -110,6 +130,8 @@ TestCase {
         manager._listsDirty = true
         manager._buildCategorizedLists()
         verify(manager.allEntitiesList.indexOf("switch.gang_2") === -1, "hidden by default")
+        verify(manager.userDevicesList.indexOf("switch.gang_2") === -1,
+               "hidden by default in the picker as well")
 
         // The same toggle on the Favorites page reaches the views through the
         // manager, so asking for hidden entities is enough to see them again.
@@ -117,6 +139,8 @@ TestCase {
         manager._listsDirty = true
         manager._buildCategorizedLists()
         verify(manager.allEntitiesList.indexOf("switch.gang_2") !== -1, "asked for, so shown")
+        verify(manager.userDevicesList.indexOf("switch.gang_2") !== -1,
+               "asked for, so pickable")
     }
 
     function test_disabled_entities_never_come_back() {

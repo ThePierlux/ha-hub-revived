@@ -94,6 +94,15 @@ where the access token lives (see Fixed).
   configuration is the token's home again, the shared database stays a copy a second
   instance may read, and `tests/js/token_storage.test.js` fails on any line that
   blanks either copy. A token lost that way has to be pasted once more.
+- **Every entity is offered to be picked, not one entity per device.** The
+  settings pages take their candidates from the manager's `userDevicesList`, and
+  that list had gone back to one row per device: a two-gang switch offered its
+  primary gang only, so the second one could be switched from the popup and never
+  placed on the dashboard or made a favorite — the thing 2.0.1 had fixed for the
+  Favorites page and the port undid. It is one entry per entity again, the same
+  list the popup's "All" tab shows, so the pickers and the popup agree on what
+  there is to pick; `tests/qml/tst_settings_pages.qml` asks the dashboard page
+  itself for both gangs.
 - The fields of the General page in a wide settings window: Kirigami stretches a
   page's form to the window and spends the slack on the label column, so the
   fields stood a third of the way across with their labels trailing behind them.
@@ -109,7 +118,7 @@ where the access token lives (see Fixed).
   brace in the middle of it, so the file did not compile and none of its cases
   executed, passing as silently as failing. The suite is run here now —
   `tests/run_qml_tests.sh` finds Qt 6's `qmltestrunner` under `/usr/lib64`, where
-  Arch and its derivatives put it — and the QML cases report 95 of them.
+  Arch and its derivatives put it — and the QML cases report 97 of them.
 
 ## [2.0.1] - 2026-11-19
 

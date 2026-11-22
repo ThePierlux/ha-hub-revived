@@ -42,6 +42,9 @@ Item {
     property bool _awaitingPong: false
     property int _pingMsgId: 0
     property var discoveredServers: []
+    // What the settings pages offer to pick: one entry per entity, so the two
+    // gangs of a switch are two things the user can place. Filled with the four
+    // lists below, in the same pass, in the same order.
     property var userDevicesList: []
     property var lightsAndSwitchesList: []
     property var climateAndSensorsList: []
@@ -293,55 +296,6 @@ Item {
             });
         }
         manager.devicesListFormatted = formatted;
-        manager._buildUserDevicesList();
-    }
-
-    function _buildUserDevicesList() {
-        var result = [];
-        var seen = {};
-
-        if (devicesListFormatted && devicesListFormatted.length > 0) {
-            for (var d = 0; d < devicesListFormatted.length; d++) {
-                var dev = devicesListFormatted[d];
-                if (dev && dev.primaryEntity) {
-                    seen[dev.primaryEntity] = true;
-                    result.push(dev.primaryEntity);
-                }
-            }
-        }
-
-        var helperDomains = ["input_boolean", "scene", "script"];
-        if (entities) {
-            var keys = Object.keys(entities);
-            for (var k = 0; k < keys.length; k++) {
-                var entKey = keys[k];
-                if (seen[entKey]) continue;
-                var devId = manager.entityToDeviceMap ? manager.entityToDeviceMap[entKey] : null;
-                if (devId) continue;
-                var dom = entKey.split(".")[0];
-                if (helperDomains.indexOf(dom) !== -1) {
-                    seen[entKey] = true;
-                    result.push(entKey);
-                }
-            }
-        }
-
-        result.sort(function(a, b) {
-            var entObjA = manager.getEntity(a);
-            var devIdA = manager.entityToDeviceMap ? (manager.entityToDeviceMap[a] || "") : "";
-            var titleA = HAHelpers.getDeviceTitle(a, entObjA, devIdA, manager);
-
-            var entObjB = manager.getEntity(b);
-            var devIdB = manager.entityToDeviceMap ? (manager.entityToDeviceMap[b] || "") : "";
-            var titleB = HAHelpers.getDeviceTitle(b, entObjB, devIdB, manager);
-
-            titleA = (titleA || a).toString().trim();
-            titleB = (titleB || b).toString().trim();
-
-            return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: "base" });
-        });
-
-        manager.userDevicesList = result;
     }
 
     function _buildCategorizedLists() {
@@ -399,6 +353,12 @@ Item {
         manager.climateAndSensorsList = sortList(sensors);
         manager.mediaAndOthersList = sortList(media);
         manager.allEntitiesList = sortList(all);
+        // The settings pages pick entities, not devices: the two gangs of a
+        // switch are two tiles placed separately, a favourite is one entity, and
+        // the header's "value next to greeting" is whatever the user points at.
+        // So this is the popup's "All" tab again - a copy of it, because a page
+        // may sort what it is handed and must not re-sort what the popup shows.
+        manager.userDevicesList = manager.allEntitiesList.slice();
         manager.entityCount = all.length;
         manager._listsDirty = false;
         manager.listsRevision++;
@@ -411,7 +371,6 @@ Item {
         onTriggered: {
             if (manager._listsDirty) {
                 manager._buildCatalog();
-                manager._buildUserDevicesList();
                 manager._buildCategorizedLists();
             }
             manager.entitiesRevision++;
