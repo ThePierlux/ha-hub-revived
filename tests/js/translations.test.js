@@ -38,9 +38,12 @@ function uiKeys() {
 function dynamicKeys() {
     const keys = new Set();
     const helper = fs.readFileSync(path.join(ROOT, "contents/code/ha_helpers.mjs"), "utf8");
-    // tr("Open") / tr("Closed"): the words a binary sensor or a state is shown
-    // by, which no Loc.t() call site names.
+    // w("off", "on") for a boolean, w("Paused") for a state read off the entity:
+    // the words a sensor or a state is shown by, which no Loc.t() names.
     for (const m of helper.matchAll(/(?<![\w.])tr\(\s*"((?:[^"\\]|\\.)*)"\s*[,)]/g)) keys.add(m[1]);
+    for (const m of helper.matchAll(/(?<![\w.])w\(\s*((?:"(?:[^"\\]|\\.)*"\s*,?\s*)+)\)/g)) {
+        for (const arg of m[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)) keys.add(arg[1]);
+    }
     const months = helper.match(/monthNames\s*=\s*\[([^\]]*)\]/);
     if (months) {
         for (const m of months[1].matchAll(/"([^"]+)"/g)) keys.add(m[1]);
@@ -180,16 +183,18 @@ test("normalizeLanguage maps system tags onto supported codes", () => {
 
 test("helper functions route their labels through the active language", () => {
     const helpers = loadLibrary("contents/code/ha_helpers.mjs");
-    // Loc.qml calls setLanguage() whenever its language resolves; that is the
-    // one route by which a plain JS library learns what to answer in.
+    // Asked with a language, they answer in it; asked without one, they follow
+    // the language Loc.qml last set - which is the route a call site that has
+    // nothing to do with languages, a list of favorites, takes.
+    assert.equal(helpers.getBinarySensorStateTitle("on", "window", "ru"), "Открыто");
+    assert.equal(helpers.getStatusDetailsText("cover.x", { state: "open", attributes: {} }, null, null, "de"), "Offen");
+    assert.equal(helpers.getBinarySensorStateTitle("on", "motion", "kk"), "Анықталды");
+
     L10N.setLanguage("ru");
-    assert.equal(helpers.getBinarySensorStateTitle("on", "window"), "Открыто");
-    assert.equal(helpers.getStatusDetailsText("cover.x", { state: "open", attributes: {} }), "Открыто");
-    L10N.setLanguage("de");
-    assert.equal(helpers.getStatusDetailsText("switch.x", { state: "on", attributes: {} }), "An");
-    assert.equal(helpers.getBinarySensorStateTitle("on", "motion"), "Bewegung");
+    assert.equal(helpers.getStatusDetailsText("switch.x", { state: "on", attributes: {} }), "Включено");
+    assert.equal(helpers.getBinarySensorStateTitle("on", "battery"), "Низкий");
     L10N.setLanguage("en");
-    assert.equal(helpers.getBinarySensorStateTitle("on", "battery"), "Low battery");
+    assert.equal(helpers.getBinarySensorStateTitle("on", "battery"), "Low");
     L10N.setLanguage(null);
 });
 

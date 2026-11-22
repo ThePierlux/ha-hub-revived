@@ -65,6 +65,21 @@ function buildGetEntityRegistryPayload(msgId) {
     });
 }
 
+function buildHistoryPayload(msgId, entityIds, startTime, endTime, minimalResponse, noAttributes) {
+    return JSON.stringify({
+        id: msgId,
+        type: "history/history_during_period",
+        start_time: startTime,
+        end_time: endTime,
+        entity_ids: Array.isArray(entityIds) ? entityIds : [entityIds],
+        // The history section lists states and the moments they changed, so the
+        // compact answer is the one it can show; a full one is bandwidth for the
+        // chart this popup has no room for.
+        minimal_response: minimalResponse !== false,
+        no_attributes: noAttributes !== false
+    });
+}
+
 function buildCallServicePayload(msgId, domain, service, serviceData, targetEntityId) {
     var payload = {
         id: msgId,

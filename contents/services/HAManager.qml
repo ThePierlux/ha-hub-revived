@@ -5,7 +5,10 @@ import org.kde.plasma.plasmoid
 import "../code/ha_client.js" as HAClient
 import "../code/ha_helpers.mjs" as HAHelpers
 import "../code/ha_storage.js" as HAStorage
+// Registers the KDE Loc.t() global over this module's catalogs, so the words the
+// header and the tray show come from the same 31 languages as the rest.
 import "../l10n"
+
 Item {
     id: manager
 
@@ -17,11 +20,9 @@ Item {
 
     property string state: "DISCONNECTED"
     property string connectionStatus: Loc.t("Disconnected")
-
-    // Why the last connection ended, in the language it was painted in. The
-    // retry line below is "reason + delay", and reading the reason back out of
-    // `connectionStatus` meant cutting the previous translation off the end of
-    // it - which only worked in the one language the cut was written for.
+    // Why the connection ended, in words, kept apart from the line the header
+    // shows: the retry notice is built out of it, and a sentence cut out of the
+    // previous notice only works in the language it was written in.
     property string failureReason: ""
     property bool isConnected: false
     property bool autoReconnectAllowed: true
@@ -57,6 +58,106 @@ Item {
     property var entityToDeviceMap: ({})
     property var deviceToEntitiesMap: ({})
     property var entityRegistryMap: ({})
+
+    // ── What the views ask the manager for ───────────────────────────────────
+    // The dashboard, the entity picker and the details page were written against
+    // a manager that answers these. Everything below is derived from the maps
+    // above, so one entity has one name and one icon everywhere it appears.
+
+    // The names the user gave entities (Settings → Dashboard). main.qml binds it
+    // from the configuration. aliasesRevision is what makes a rename re-title the
+    // tiles at once: their text is computed from entitiesRevision, and without a
+    // revision of its own an entity kept its old name until the next state update.
+    property string entityAliases: "{}"
+    readonly property var aliasMap: HAHelpers.parseAliases(manager.entityAliases)
+    property int aliasesRevision: 0
+    // A rename changes titles, so it is a structural change: the lists are
+    // re-sorted and the catalogue re-titled, not only the revision bumped.
+    onEntityAliasesChanged: manager._namesChanged()
+
+    // Whether the lists and the picker may show entities the registry hides or
+    // files under diagnostic/config. Off is what the lists did before.
+    property bool includeHiddenEntities: false
+    property bool includeDiagnosticEntities: false
+
+    // One record per entity: name, domain, device, area, and whether the registry
+    // hides it. Rebuilt in the debounced pass, with the lists, not per state.
+    property var entityCatalog: []
+    property var _catalogById: ({})
+
+    // The person whose name and picture the header shows. The configured id wins;
+    // otherwise the first person that actually has a picture.
+    property string headerPersonEntityId: (typeof Plasmoid !== "undefined" && Plasmoid && Plasmoid.configuration)
+        ? (Plasmoid.configuration.headerPersonEntityId || "")
+        : ""
+
+    readonly property string primaryPersonEntityId: {
+        var rev = manager.entitiesRevision;
+        if (manager.headerPersonEntityId && manager.entities[manager.headerPersonEntityId]) {
+            return manager.headerPersonEntityId;
+        }
+        var keys = Object.keys(manager.entities || {});
+        var fallback = "";
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i].indexOf("person.") !== 0) continue;
+            if (!fallback) fallback = keys[i];
+            var ent = manager.entities[keys[i]];
+            if (ent && ent.attributes && ent.attributes.entity_picture) return keys[i];
+        }
+        return fallback;
+    }
+
+    readonly property string primaryPersonName: {
+        var id = manager.primaryPersonEntityId;
+        if (!id) return "";
+        var ent = manager.entities[id];
+        var alias = manager.entityAliasFor(id);
+        if (alias) return alias;
+        return (ent && ent.attributes && ent.attributes.friendly_name) ? ent.attributes.friendly_name : "";
+    }
+
+    readonly property string primaryPersonPictureUrl: {
+        var id = manager.primaryPersonEntityId;
+        if (!id) return "";
+        var ent = manager.entities[id];
+        var picture = (ent && ent.attributes) ? (ent.attributes.entity_picture || "") : "";
+        return picture ? manager.resourceUrl(picture) : "";
+    }
+
+    // The people to offer in Settings → Appearance.
+    readonly property var personOptions: {
+        var rev = manager.entitiesRevision;
+        var keys = Object.keys(manager.entities || {});
+        var result = [];
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i].indexOf("person.") !== 0) continue;
+            var ent = manager.entities[keys[i]];
+            result.push({
+                id: keys[i],
+                name: manager.entityAliasFor(keys[i])
+                    || ((ent && ent.attributes && ent.attributes.friendly_name) ? ent.attributes.friendly_name : keys[i])
+            });
+        }
+        result.sort(function(a, b) { return a.name.localeCompare(b.name); });
+        return result;
+    }
+
+    // http(s)://host:port. HA only serves /api/* pictures to an authenticated
+    // request, and an <Image> cannot sign one, so the token travels in the URL.
+    readonly property string httpBaseUrl: {
+        var clean = String(host || "").replace(/^https?:\/\//i, "").replace(/^wss?:\/\//i, "").replace(/\/+$/, "");
+        if (!clean) return "";
+        return (useSsl ? "https://" : "http://") + clean + ":" + port;
+    }
+
+    readonly property var _areaById: {
+        var byId = {};
+        var list = manager.areasList || [];
+        for (var i = 0; i < list.length; i++) {
+            if (list[i] && list[i].area_id) byId[list[i].area_id] = list[i];
+        }
+        return byId;
+    }
 
     property int _getConfigMsgId: 0
     property int _getStatesMsgId: 0
@@ -264,7 +365,13 @@ Item {
 
             if (skipDomains.indexOf(dom) !== -1) continue;
             var r = reg[entId];
-            if (r && (r.hidden || r.disabled || r.category === "diagnostic" || r.category === "config")) continue;
+            // "hidden" and "diagnostic" are the two toggles the Favorites page
+            // binds on the manager; off, they stay out of the lists as they
+            // always did. A disabled entity never comes back.
+            if (r && r.disabled) continue;
+            if (r && r.hidden && !manager.includeHiddenEntities) continue;
+            if (r && (r.category === "diagnostic" || r.category === "config")
+                && !manager.includeDiagnosticEntities) continue;
 
             all.push(entId);
 
@@ -303,6 +410,7 @@ Item {
         repeat: false
         onTriggered: {
             if (manager._listsDirty) {
+                manager._buildCatalog();
                 manager._buildUserDevicesList();
                 manager._buildCategorizedLists();
             }
@@ -315,6 +423,11 @@ Item {
         if (!revisionDebounceTimer.running) {
             revisionDebounceTimer.start();
         }
+    }
+
+    function _namesChanged() {
+        manager.aliasesRevision++;
+        manager._notifyEntitiesChanged(true);
     }
 
     Timer {
@@ -408,9 +521,9 @@ Item {
             connTimeoutTimer.stop();
             manager.discoveredServers = serverList;
             if (serverList.length > 0) {
-                manager.connectionStatus = Loc.t("Servers found: %1", serverList.length);
+                manager.connectionStatus = Loc.t("Found devices: %1", serverList.length);
             } else {
-                manager.connectionStatus = Loc.t("No servers found in local network");
+                manager.connectionStatus = Loc.t("No devices found in local network");
             }
         }
     }
@@ -427,9 +540,9 @@ Item {
                 var err = webSocket.errorString || Loc.t("Unable to connect to server");
                 var msg;
                 if (manager.useSsl && (err.indexOf("wrong version number") !== -1 || err.indexOf("SSL routines") !== -1 || err.indexOf("handshake") !== -1)) {
-                    msg = Loc.t("SSL error: the server does not use SSL. Disable “wss://”.");
+                    msg = Loc.t("SSL Error: HA server is running without SSL. Uncheck 'SSL (wss://)'");
                 } else {
-                    msg = Loc.t("Error: %1.", err);
+                    msg = Loc.t("Error: %1", err);
                 }
                 manager.state = "ERROR";
                 manager.isConnected = false;
@@ -446,8 +559,7 @@ Item {
 
                 if (manager.state !== "ERROR") {
                     manager.state = "DISCONNECTED";
-                    manager.failureReason = Loc.t("Connection closed.");
-                    manager.connectionStatus = manager.failureReason;
+                    manager.connectionStatus = Loc.t("Disconnected");
                 }
                 manager.isConnected = false;
                 manager._scheduleReconnect();
@@ -477,6 +589,83 @@ Item {
     function getDeviceRaw(deviceId) {
         if (!deviceId) return null;
         return _deviceById[deviceId] || null;
+    }
+
+    function entityAliasFor(entId) {
+        return HAHelpers.aliasFor(manager.aliasMap, entId);
+    }
+
+    function getAreaRaw(areaId) {
+        if (!areaId) return null;
+        return manager._areaById[areaId] || null;
+    }
+
+    function getEntityRegistry(entId) {
+        return manager.entityRegistryMap ? (manager.entityRegistryMap[entId] || null) : null;
+    }
+
+    function getCatalogEntry(entId) {
+        if (!entId) return null;
+        return manager._catalogById[entId] || null;
+    }
+
+    function resourceUrl(pathOrUrl) {
+        if (!pathOrUrl) return "";
+        if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+        if (!manager.httpBaseUrl) return "";
+        var url = manager.httpBaseUrl + (pathOrUrl.charAt(0) === "/" ? pathOrUrl : "/" + pathOrUrl);
+        if (manager.accessToken && url.indexOf("auth_token=") === -1) {
+            url += (url.indexOf("?") === -1 ? "?" : "&") + "auth_token=" + encodeURIComponent(manager.accessToken);
+        }
+        return url;
+    }
+
+    // The catalogue behind getCatalogEntry(): one record per entity, in the order
+    // the picker and the dashboard list them. Runs in the debounced pass with the
+    // lists, so a burst of state updates pays for it once.
+    function _buildCatalog() {
+        var byId = {};
+        var list = [];
+        var keys = manager.entities ? Object.keys(manager.entities) : [];
+        var reg = manager.entityRegistryMap || {};
+
+        for (var i = 0; i < keys.length; i++) {
+            var id = keys[i];
+            var ent = manager.entities[id];
+            var r = reg[id] || null;
+            var deviceId = manager.entityToDeviceMap ? (manager.entityToDeviceMap[id] || "") : "";
+            var dev = deviceId ? manager.getDeviceRaw(deviceId) : null;
+            var areaId = (manager.entityToAreaMap ? (manager.entityToAreaMap[id] || "") : "")
+                || (dev && dev.area_id ? dev.area_id : "");
+            var area = manager.getAreaRaw(areaId);
+            var category = (r && r.category) || null;
+
+            var entry = {
+                id: id,
+                entityId: id,
+                name: HAHelpers.getEntityTitle(id, ent, r, manager) || id,
+                domain: id.split(".")[0],
+                deviceId: deviceId,
+                deviceName: dev ? HAHelpers.getDeviceTitle(id, ent, deviceId, manager) : "",
+                areaId: areaId,
+                areaName: area ? (area.name || "") : "",
+                category: category,
+                hidden: !!(r && r.hidden),
+                disabled: !!(r && r.disabled),
+                isConfig: category === "config",
+                isDiagnostic: category === "diagnostic"
+            };
+            list.push(entry);
+            byId[id] = entry;
+        }
+
+        list.sort(function(a, b) {
+            var cmp = String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: "base" });
+            return cmp !== 0 ? cmp : a.id.localeCompare(b.id);
+        });
+
+        manager._catalogById = byId;
+        manager.entityCatalog = list;
     }
 
     function _connectSocket() {
@@ -554,6 +743,17 @@ Item {
         state = "DISCONNECTED";
         connectionStatus = Loc.t("Disconnected");
         isConnected = false;
+
+        // A request whose answer can no longer arrive still has someone waiting
+        // for it: the history and the statistics sections clear their "loading"
+        // line in their handler, so an unanswered one would leave them spinning
+        // until the popup was rebuilt. They are answered with nothing.
+        var pending = Object.keys(_customMsgHandlers);
+        for (var i = 0; i < pending.length; i++) {
+            var waiting = _customMsgHandlers[pending[i]];
+            delete _customMsgHandlers[pending[i]];
+            waiting(null);
+        }
     }
 
     function callService(domain, service, entityId, serviceData) {
@@ -601,8 +801,8 @@ Item {
             autoReconnectTimer.stop();
             manager.disconnectFromHA();
             state = "ERROR";
-            failureReason = Loc.t("Invalid Access Token");
-            connectionStatus = failureReason;
+            manager.failureReason = Loc.t("Invalid Access Token");
+            connectionStatus = manager.failureReason;
             return;
         }
 

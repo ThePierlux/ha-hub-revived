@@ -48,7 +48,7 @@ QtObject {
 
     readonly property string lastChangedText: entityObj ? HAHelpers.formatTimeInState(entityObj.last_changed) : ""
 
-    readonly property url iconUrl: Qt.resolvedUrl("../../icons/" + HAHelpers.getDomainIcon(domain, rawState, attributes) + ".svg")
+    readonly property url iconUrl: Qt.resolvedUrl("../../icons/" + HAHelpers.getDomainAssetIcon(domain, rawState, attributes) + ".svg")
 
     readonly property bool isToggleable: ["light", "switch", "input_boolean", "fan", "outlet", "siren", "humidifier", "automation"].indexOf(domain) !== -1
     readonly property bool isActionable: ["script", "scene", "button", "input_button"].indexOf(domain) !== -1
