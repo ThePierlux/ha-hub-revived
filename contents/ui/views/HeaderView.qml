@@ -16,6 +16,15 @@ Item {
     property string headerEntityId: ""
     property bool headerEntityLabel: false
 
+    readonly property string greetingText: {
+        if (!connected || !fullRoot || fullRoot.greetingText === undefined) return "";
+        return fullRoot.greetingText || "";
+    }
+
+    // What the server is called, where it still fits: on the title line while
+    // nobody is being greeted, next to the count once a greeting has taken it.
+    readonly property bool greetingInTitle: headerView.greetingText.length > 0
+
     readonly property string headerEntityText: {
         if (!connected || headerEntityId.length === 0) return "";
         return HAHelpers.getEntityHeaderValue(headerEntityId,
@@ -87,7 +96,13 @@ Item {
             Layout.alignment: Qt.AlignVCenter
 
             PlasmaComponents3.Label {
-                text: (haManager && haManager.serverName) ? haManager.serverName : "Home Assistant"
+                text: {
+                    // A greeted person takes the title line; the server's name
+                    // moves down to where the count is, so neither is lost.
+                    var greeting = headerView.greetingText;
+                    if (greeting.length > 0) return greeting;
+                    return (haManager && haManager.serverName) ? haManager.serverName : "Home Assistant";
+                }
                 font.weight: Font.Bold
                 elide: Text.ElideRight
                 Layout.fillWidth: true
@@ -110,7 +125,11 @@ Item {
                     // that decides the wording picks the key as well; a plural
                     // rule of its own per language is not modelled here.
                     var n = haManager.entityCount;
-                    return Loc.t(n === 1 ? "%1 entity" : "%1 entities", n);
+                    var count = Loc.t(n === 1 ? "%1 entity" : "%1 entities", n);
+                    if (headerView.greetingInTitle && haManager.serverName) {
+                        return haManager.serverName + " \u00b7 " + count;
+                    }
+                    return count;
                 }
                 font: Kirigami.Theme.smallFont
                 color: headerView.connected ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.negativeTextColor
