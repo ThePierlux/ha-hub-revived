@@ -1,2 +1,3 @@
 dist/
 *.plasmoid
+node_modules/
