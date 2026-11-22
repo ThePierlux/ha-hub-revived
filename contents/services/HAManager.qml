@@ -56,7 +56,6 @@ Item {
 
     property var areasList: []
     property var devicesList: []
-    property var devicesListFormatted: []
     property var entityToAreaMap: ({})
     property var entityToDeviceMap: ({})
     property var deviceToEntitiesMap: ({})
@@ -211,91 +210,6 @@ Item {
 
     function saveSharedCredentials() {
         HAStorage.saveSharedCredentials(LocalStorage, host, port, accessToken, useSsl, serverName);
-    }
-
-    function isSecondaryEntity(entId) {
-        return HAHelpers.isSecondaryEntity(entId);
-    }
-
-    function getPrimaryEntityForDevice(devEnts) {
-        if (!devEnts || devEnts.length === 0) return "";
-        var controlDomains = [
-            "switch", "light", "climate", "fan", "cover", "lock",
-            "outlet", "valve", "media_player", "vacuum", "water_heater",
-            "humidifier", "siren", "camera", "alarm_control_panel", "input_boolean"
-        ];
-
-        for (var c = 0; c < controlDomains.length; c++) {
-            var cDom = controlDomains[c];
-            for (var i = 0; i < devEnts.length; i++) {
-                var entId = devEnts[i];
-                if (entId.split(".")[0] === cDom) {
-                    if (manager.isSecondaryEntity(entId)) continue;
-                    var isConfigOrDiag = manager.entityRegistryMap && manager.entityRegistryMap[entId] &&
-                        manager.entityRegistryMap[entId].category !== null &&
-                        manager.entityRegistryMap[entId].category !== undefined;
-                    if (!isConfigOrDiag) return entId;
-                }
-            }
-        }
-
-        for (var c2 = 0; c2 < controlDomains.length; c2++) {
-            var cDom2 = controlDomains[c2];
-            for (var j = 0; j < devEnts.length; j++) {
-                var entId2 = devEnts[j];
-                if (entId2.split(".")[0] === cDom2) {
-                    if (!manager.isSecondaryEntity(entId2)) return entId2;
-                }
-            }
-        }
-
-        var diagnosticFallback = "";
-        for (var s = 0; s < devEnts.length; s++) {
-            var entId3 = devEnts[s];
-            var d2 = entId3.split(".")[0];
-            if (d2 === "sensor" || d2 === "binary_sensor") {
-                if (manager.isSecondaryEntity(entId3)) continue;
-                var isDiag = manager.entityRegistryMap && manager.entityRegistryMap[entId3] &&
-                    (manager.entityRegistryMap[entId3].category === "diagnostic" || manager.entityRegistryMap[entId3].category === "config");
-                if (!isDiag) return entId3;
-                if (!diagnosticFallback) diagnosticFallback = entId3;
-            }
-        }
-        if (diagnosticFallback) return diagnosticFallback;
-
-        for (var f = 0; f < devEnts.length; f++) {
-            if (!manager.isSecondaryEntity(devEnts[f])) return devEnts[f];
-        }
-
-        return devEnts[0];
-    }
-
-    function _buildFormattedDevices() {
-        var rawDevs = manager.devicesList || [];
-        var devToEnts = manager.deviceToEntitiesMap || {};
-        var formatted = [];
-
-        for (var i = 0; i < rawDevs.length; i++) {
-            var dev = rawDevs[i];
-            if (!dev || !dev.id || !dev.name || dev.name.trim().length === 0) continue;
-            if (dev.disabled_by !== null && dev.disabled_by !== undefined) continue;
-
-            var devEnts = devToEnts[dev.id] || [];
-            var primaryEnt = manager.getPrimaryEntityForDevice(devEnts);
-
-            formatted.push({
-                id: dev.id,
-                name: dev.name_by_user || dev.name,
-                model: dev.model || "",
-                manufacturer: dev.manufacturer || "",
-                sw_version: dev.sw_version || "",
-                area_id: dev.area_id || "",
-                primaryEntity: primaryEnt,
-                entityCount: devEnts.length,
-                entities: devEnts
-            });
-        }
-        manager.devicesListFormatted = formatted;
     }
 
     function _buildCategorizedLists() {
@@ -844,8 +758,6 @@ Item {
                 }
             }
             manager._tempDeviceToAreaMap = devToArea;
-            manager._buildFormattedDevices();
-
             _getEntityRegMsgId = manager.getNextMessageId();
             manager.safeSend(HAClient.buildGetEntityRegistryPayload(_getEntityRegMsgId));
             return;
@@ -885,7 +797,6 @@ Item {
             manager.entityToAreaMap = entToArea;
             manager.entityToDeviceMap = entToDev;
             manager.deviceToEntitiesMap = devToEnts;
-            manager._buildFormattedDevices();
             manager._notifyEntitiesChanged(true);
             return;
         }
