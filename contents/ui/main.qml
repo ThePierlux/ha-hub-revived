@@ -5,7 +5,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 import "../services" as Services
 import "components" as Components
-
+import "../l10n"
 PlasmoidItem {
     id: root
 
@@ -27,9 +27,9 @@ PlasmoidItem {
         : "HA-Hub"
 
     toolTipSubText: {
-        if (!haManagerService) return i18n("Disconnected");
-        if (!haManagerService.isConnected) return haManagerService.connectionStatus || i18n("Disconnected");
-        return i18n("Connected · %1 entities", haManagerService.entityCount);
+        if (!haManagerService) return Loc.t("Disconnected");
+        if (!haManagerService.isConnected) return haManagerService.connectionStatus || Loc.t("Disconnected");
+        return Loc.t("Connected · %1 entities", haManagerService.entityCount);
     }
 
     readonly property string desktopEntityId: Plasmoid.configuration.desktopEntityId || ""
@@ -59,6 +59,25 @@ PlasmoidItem {
         } catch (e) {
             console.warn("HA-hub: Error opening settings:", e);
         }
+    }
+
+    // Hands the language saved in Settings to the Loc singleton of this engine.
+    // The bridge lives in a file of its own, where Plasma's `Plasmoid` is not
+    // visible, so the configuration is handed to it from here.
+    //
+    // The configuration is asked again every time the popup opens: the settings
+    // dialog runs in a process of its own and writes the file, and a running
+    // applet hears nothing about it. Asking at the moment the language is looked
+    // at is what makes a language chosen in Settings reach a widget that was
+    // never restarted.
+    Components.LanguageBridge {
+        id: appletLanguageBridge
+        configuration: Plasmoid.configuration
+    }
+
+    onExpandedChanged: {
+        if (root.expanded)
+            appletLanguageBridge.recheck()
     }
 
     Services.HAManager {

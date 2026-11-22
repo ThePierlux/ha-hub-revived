@@ -3,8 +3,8 @@ import QtQuick.Layouts
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import org.kde.plasma.plasmoid
 import org.kde.kirigami as Kirigami
-import "../../code/ha_helpers.js" as HAHelpers
-
+import "../../code/ha_helpers.mjs" as HAHelpers
+import "../../l10n"
 PlasmaComponents3.ItemDelegate {
     id: cardRoot
 
@@ -161,7 +161,7 @@ PlasmaComponents3.ItemDelegate {
                 }
                 PlasmaComponents3.Label {
                     Layout.fillWidth: true
-                    text: i18n("No device selected")
+                    text: Loc.t("No device selected")
                     font.bold: true
                     font.pointSize: 9
                     horizontalAlignment: Text.AlignHCenter
@@ -169,7 +169,7 @@ PlasmaComponents3.ItemDelegate {
                 }
                 PlasmaComponents3.Label {
                     Layout.fillWidth: true
-                    text: i18n("Click to configure")
+                    text: Loc.t("Click to configure")
                     font.pointSize: 7.5
                     opacity: 0.65
                     horizontalAlignment: Text.AlignHCenter

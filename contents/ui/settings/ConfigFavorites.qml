@@ -5,14 +5,29 @@ import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import "../../services" as Services
-import "../../code/ha_helpers.js" as HAHelpers
-
+import "../../code/ha_helpers.mjs" as HAHelpers
+import "../components" as Components
+import "../../l10n"
 Kirigami.Page {
     id: favoritesSettings
-    title: i18n("Favorite Devices")
+    // Plasma's own title for a page is read before this page's bridge has set
+    // the language, and an assignment breaks the binding - so the heading is
+    // re-asserted here, as it is on the General page.
+    readonly property string pageTitle: Loc.t("Favorite Devices")
+    title: pageTitle
+    onPageTitleChanged: favoritesSettings.title = favoritesSettings.pageTitle
 
     implicitWidth: Kirigami.Units.gridUnit * 34
     implicitHeight: Kirigami.Units.gridUnit * 28
+
+    // The settings dialog is painted by an engine of its own, which knows
+    // nothing about the language until a page of it says so. Handed over where
+    // Plasma lets a page see the configuration at all; a page normally cannot,
+    // and then the language travels the Plasma way - through cfg_ and Apply.
+    Components.LanguageBridge {
+        configuration: (typeof Plasmoid !== "undefined" && Plasmoid && Plasmoid.configuration)
+            ? Plasmoid.configuration : null
+    }
 
     property string cfg_host: ""
     property string cfg_port: "8123"
@@ -121,7 +136,7 @@ Kirigami.Page {
         var rev = haManager ? haManager.entitiesRevision : 0;
         var cleanId = HAHelpers.cleanEntityId(entId);
         if (!haManager || !cleanId) {
-            return { title: entId || "", areaName: "", statusText: i18n("Unavailable"), isOn: false, isUnavailable: true };
+            return { title: entId || "", areaName: "", statusText: Loc.t("Unavailable"), isOn: false, isUnavailable: true };
         }
 
         var entObj = haManager.getEntity(cleanId);
@@ -192,7 +207,7 @@ Kirigami.Page {
         }
 
         PlasmaComponents3.Label {
-            text: i18n("Please wait, loading data...")
+            text: Loc.t("Please wait, loading data...")
             font.bold: true
             font.pointSize: Qt.application.font.pointSize * 1.15
             horizontalAlignment: Text.AlignHCenter
@@ -200,7 +215,7 @@ Kirigami.Page {
         }
 
         PlasmaComponents3.Label {
-            text: haManager ? haManager.connectionStatus : i18n("Connecting to Home Assistant...")
+            text: haManager ? haManager.connectionStatus : Loc.t("Connecting to Home Assistant...")
             font.pointSize: Kirigami.Theme.smallFont.pointSize
             color: Kirigami.Theme.disabledTextColor
             horizontalAlignment: Text.AlignHCenter
@@ -223,7 +238,7 @@ Kirigami.Page {
         }
 
         PlasmaComponents3.Label {
-            text: haManager ? haManager.connectionStatus : i18n("Connection Error")
+            text: haManager ? haManager.connectionStatus : Loc.t("Connection Error")
             font.pointSize: Kirigami.Theme.defaultFont.pointSize
             color: Kirigami.Theme.negativeTextColor
             horizontalAlignment: Text.AlignHCenter
@@ -232,7 +247,7 @@ Kirigami.Page {
         }
 
         PlasmaComponents3.Button {
-            text: i18n("Retry Connection")
+            text: Loc.t("Retry Connection")
             icon.name: "view-refresh-symbolic"
             Layout.alignment: Qt.AlignHCenter
             onClicked: {
@@ -253,7 +268,7 @@ Kirigami.Page {
 
             Controls.TextField {
                 id: searchInput
-                placeholderText: i18n("Search device by name or ID...")
+                placeholderText: Loc.t("Search device by name or ID...")
                 Layout.fillWidth: true
                 text: favoritesSettings.searchFilter
                 onTextChanged: favoritesSettings.searchFilter = text
@@ -271,10 +286,10 @@ Kirigami.Page {
                 }
 
                 PlasmaComponents3.TabButton {
-                    text: i18n("All (%1)", favoritesSettings.rawAllEntitiesList.length)
+                    text: Loc.t("All (%1)", favoritesSettings.rawAllEntitiesList.length)
                 }
                 PlasmaComponents3.TabButton {
-                    text: i18n("Favorites (%1)", favoritesSettings.favEntitiesArray.length)
+                    text: Loc.t("Favorites (%1)", favoritesSettings.favEntitiesArray.length)
                 }
             }
         }

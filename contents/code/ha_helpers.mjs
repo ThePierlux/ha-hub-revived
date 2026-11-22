@@ -1,17 +1,21 @@
-// Translation helper: i18n() is provided by Plasma's QML context; fall back to the
-// English source when unavailable. Extra args replace %1, %2, ...
+// The widget's language lives in contents/l10n, which every engine paints
+// through its Loc singleton. A plain JS library has no singleton to reach, so
+// it goes to the module behind it: setLanguage() keeps this in step with Loc,
+// and tr() below reads the catalog Loc just painted. Keys are the English
+// source text, with %1, %2, ... filled in from the arguments.
+import * as T from "../l10n/translations.mjs";
+
 function tr(text) {
     var args = Array.prototype.slice.call(arguments, 1);
-    if (typeof i18n === "function") return i18n.apply(null, [text].concat(args));
-    return text.replace(/%(\d+)/g, function(m, n) { var v = args[n - 1]; return v === undefined ? m : v; });
+    return T.tr(text, args);
 }
 
-function cleanEntityId(id) {
+export function cleanEntityId(id) {
     if (!id) return "";
     return id.toString().replace(/['"\[\]]/g, "").trim();
 }
 
-function isSecondaryEntity(entId) {
+export function isSecondaryEntity(entId) {
     if (!entId) return false;
     var lower = entId.toLowerCase();
     var secondaryKeywords = [
@@ -30,7 +34,7 @@ function isSecondaryEntity(entId) {
     return false;
 }
 
-function getDeviceTitle(entId, entObj, devId, haManager) {
+export function getDeviceTitle(entId, entObj, devId, haManager) {
     if (!entId) return "";
     if (haManager && devId) {
         var dev = haManager.getDeviceRaw ? haManager.getDeviceRaw(devId) : null;
@@ -43,7 +47,7 @@ function getDeviceTitle(entId, entObj, devId, haManager) {
     return entId;
 }
 
-function getAreaName(cleanId, haManager) {
+export function getAreaName(cleanId, haManager) {
     if (!haManager || !cleanId) return "";
     var devId = haManager.entityToDeviceMap ? (haManager.entityToDeviceMap[cleanId] || "") : "";
     var dev = (haManager.getDeviceRaw && devId) ? haManager.getDeviceRaw(devId) : null;
@@ -57,7 +61,7 @@ function getAreaName(cleanId, haManager) {
     return "";
 }
 
-function getBinarySensorStateTitle(state, deviceClass) {
+export function getBinarySensorStateTitle(state, deviceClass) {
     var isOn = (state === "on");
     var dc = (deviceClass || "").toLowerCase();
     if (dc === "door" || dc === "garage_door" || dc === "window" || dc === "opening") {
@@ -98,7 +102,7 @@ function getBinarySensorStateTitle(state, deviceClass) {
 
 // Icon helpers return a bare key; QML resolves it to contents/icons/<key>.svg
 // (see iconUrl()). Keeping URL resolution in QML avoids context issues in JS.
-function getBinarySensorIcon(deviceClass, isOn) {
+export function getBinarySensorIcon(deviceClass, isOn) {
     var dc = (deviceClass || "").toLowerCase();
     if (dc === "door" || dc === "garage_door" || dc === "opening") return isOn ? "door-open" : "door";
     if (dc === "window") return "window";
@@ -116,7 +120,7 @@ function getBinarySensorIcon(deviceClass, isOn) {
     return "sensor";
 }
 
-function getSensorIcon(deviceClass, unit) {
+export function getSensorIcon(deviceClass, unit) {
     var dc = (deviceClass || "").toLowerCase();
     var u = (unit || "").toString();
     if (dc === "temperature" || u === "°C" || u === "°F") return "temperature";
@@ -131,7 +135,7 @@ function getSensorIcon(deviceClass, unit) {
     return "sensor";
 }
 
-function getDomainIcon(domain, state, attributes) {
+export function getDomainIcon(domain, state, attributes) {
     var dom = (domain || "").toLowerCase();
     var attrs = attributes || {};
     switch (dom) {
@@ -177,14 +181,14 @@ function getDomainIcon(domain, state, attributes) {
 
 // Entity label for lists: friendly_name is unique per entity, while the
 // device name is shared by every entity of the device.
-function getEntityTitle(entId, entObj) {
+export function getEntityTitle(entId, entObj) {
     if (entObj && entObj.attributes && entObj.attributes.friendly_name) return entObj.attributes.friendly_name;
     if (!entId) return "";
     var n = entId.split(".").slice(1).join(".").replace(/_/g, " ");
     return n.charAt(0).toUpperCase() + n.slice(1);
 }
 
-function getStatusDetailsText(cleanId, entObj, devId, haManager) {
+export function getStatusDetailsText(cleanId, entObj, devId, haManager) {
     if (!entObj || entObj.state === undefined || entObj.state === "unavailable" || entObj.state === "unknown") {
         return tr("Unavailable");
     }
@@ -254,10 +258,10 @@ function getStatusDetailsText(cleanId, entObj, devId, haManager) {
     }
     if (dom === "alarm_control_panel") {
         if (state === "disarmed") return tr("Disarmed");
-        if (state === "armed_home") return tr("Armed (home)");
-        if (state === "armed_away") return tr("Armed (away)");
-        if (state === "armed_night") return tr("Armed (night)");
-        if (state === "triggered") return tr("Triggered!");
+        if (state === "armed_home") return tr("Armed Home");
+        if (state === "armed_away") return tr("Armed Away");
+        if (state === "armed_night") return tr("Armed Night");
+        if (state === "triggered") return tr("Triggered");
         return state;
     }
     if (dom === "valve") {
@@ -291,7 +295,7 @@ function getStatusDetailsText(cleanId, entObj, devId, haManager) {
     return state + unit;
 }
 
-function formatTimeInState(lastChanged) {
+export function formatTimeInState(lastChanged) {
     if (!lastChanged) return "";
     var changedDate = new Date(lastChanged);
     var now = new Date();
@@ -309,7 +313,7 @@ function formatTimeInState(lastChanged) {
     return tr("%1s", diffSec);
 }
 
-function formatLastChangedDate(lastChanged, fallback) {
+export function formatLastChangedDate(lastChanged, fallback) {
     if (!lastChanged) return fallback || "—";
     var d = new Date(lastChanged);
     if (isNaN(d.getTime())) return fallback || "—";

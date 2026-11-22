@@ -1,0 +1,2 @@
+module io.github.thepierlux.hahubrevived.l10n
+singleton Loc 1.0 Loc.qml

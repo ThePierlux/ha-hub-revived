@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components 3.0 as PlasmaComponents3
-
+import "../../../l10n"
 ColumnLayout {
     id: climSec
     required property var detailsPage
@@ -28,7 +28,7 @@ ColumnLayout {
             RowLayout {
                 Layout.fillWidth: true
                 PlasmaComponents3.Label {
-                    text: i18n("INDOOR CLIMATE")
+                    text: Loc.t("INDOOR CLIMATE")
                     font.bold: true
                     font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.75
                     color: Kirigami.Theme.disabledTextColor
@@ -60,9 +60,9 @@ ColumnLayout {
                         text: {
                             if (!detailsPage.tempEntityObj) return "";
                             var t = parseFloat(detailsPage.tempEntityObj.state);
-                            if (t > 26) return i18n("Hot");
-                            if (t < 19) return i18n("Cool");
-                            return i18n("Comfortable");
+                            if (t > 26) return Loc.t("Hot");
+                            if (t < 19) return Loc.t("Cool");
+                            return Loc.t("Comfortable");
                         }
                         font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.82
                         color: Kirigami.Theme.disabledTextColor
@@ -89,9 +89,9 @@ ColumnLayout {
                         text: {
                             if (!detailsPage.humidityEntityObj) return "";
                             var h = parseFloat(detailsPage.humidityEntityObj.state);
-                            if (h > 65) return i18n("Humid");
-                            if (h < 35) return i18n("Dry");
-                            return i18n("Normal humidity");
+                            if (h > 65) return Loc.t("Humid");
+                            if (h < 35) return Loc.t("Dry");
+                            return Loc.t("Normal humidity");
                         }
                         font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.82
                         color: Kirigami.Theme.disabledTextColor
@@ -132,7 +132,7 @@ ColumnLayout {
                 ColumnLayout {
                     spacing: 1
                     Layout.fillWidth: true
-                    PlasmaComponents3.Label { text: i18n("Min Temp (24h)"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
+                    PlasmaComponents3.Label { text: Loc.t("Min Temp (24h)"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
                     PlasmaComponents3.Label {
                         text: tempStatsService.todayMinStr
                         font.bold: true
@@ -144,7 +144,7 @@ ColumnLayout {
                 ColumnLayout {
                     spacing: 1
                     Layout.fillWidth: true
-                    PlasmaComponents3.Label { text: i18n("Avg Temp (24h)"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
+                    PlasmaComponents3.Label { text: Loc.t("Avg Temp (24h)"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
                     PlasmaComponents3.Label {
                         text: tempStatsService.todayAvgStr
                         font.bold: true
@@ -156,7 +156,7 @@ ColumnLayout {
                 ColumnLayout {
                     spacing: 1
                     Layout.fillWidth: true
-                    PlasmaComponents3.Label { text: i18n("Max Temp (24h)"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
+                    PlasmaComponents3.Label { text: Loc.t("Max Temp (24h)"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
                     PlasmaComponents3.Label {
                         text: tempStatsService.todayMaxStr
                         font.bold: true
@@ -188,7 +188,7 @@ ColumnLayout {
                 ColumnLayout {
                     spacing: 1
                     Layout.fillWidth: true
-                    PlasmaComponents3.Label { text: i18n("Min Humidity"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
+                    PlasmaComponents3.Label { text: Loc.t("Min Humidity"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
                     PlasmaComponents3.Label {
                         text: humidityStatsService.todayMinStr
                         font.bold: true
@@ -200,7 +200,7 @@ ColumnLayout {
                 ColumnLayout {
                     spacing: 1
                     Layout.fillWidth: true
-                    PlasmaComponents3.Label { text: i18n("Avg Humidity"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
+                    PlasmaComponents3.Label { text: Loc.t("Avg Humidity"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
                     PlasmaComponents3.Label {
                         text: humidityStatsService.todayAvgStr
                         font.bold: true
@@ -212,7 +212,7 @@ ColumnLayout {
                 ColumnLayout {
                     spacing: 1
                     Layout.fillWidth: true
-                    PlasmaComponents3.Label { text: i18n("Max Humidity"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
+                    PlasmaComponents3.Label { text: Loc.t("Max Humidity"); font.pointSize: 7.5; color: Kirigami.Theme.disabledTextColor }
                     PlasmaComponents3.Label {
                         text: humidityStatsService.todayMaxStr
                         font.bold: true

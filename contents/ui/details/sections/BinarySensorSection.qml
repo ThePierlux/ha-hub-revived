@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components 3.0 as PlasmaComponents3
-import "../../../code/ha_helpers.js" as HAHelpers
-
+import "../../../code/ha_helpers.mjs" as HAHelpers
+import "../../../l10n"
 ColumnLayout {
     id: binSec
     required property var detailsPage
@@ -40,7 +40,7 @@ ColumnLayout {
             RowLayout {
                 Layout.fillWidth: true
                 PlasmaComponents3.Label {
-                    text: i18n("SENSOR STATE")
+                    text: Loc.t("SENSOR STATE")
                     font.bold: true
                     font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.75
                     color: Kirigami.Theme.disabledTextColor
@@ -87,7 +87,7 @@ ColumnLayout {
                 PlasmaComponents3.Label {
                     text: {
                         var timeStr = HAHelpers.formatTimeInState(detailsPage.primaryEntityObj ? detailsPage.primaryEntityObj.last_changed : null);
-                        return timeStr ? i18n("In this state for %1", timeStr) : i18n("Status is current");
+                        return timeStr ? Loc.t("In this state for %1", timeStr) : Loc.t("Status is current");
                     }
                     font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.82
                     color: Kirigami.Theme.disabledTextColor
@@ -113,7 +113,7 @@ ColumnLayout {
             RowLayout {
                 Layout.fillWidth: true
                 PlasmaComponents3.Label {
-                    text: i18n("ACTIVITY & EVENTS")
+                    text: Loc.t("ACTIVITY & EVENTS")
                     font.bold: true
                     font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.75
                     color: Kirigami.Theme.disabledTextColor
@@ -121,7 +121,7 @@ ColumnLayout {
                 }
 
                 PlasmaComponents3.Label {
-                    text: i18n("Today: %1", binaryStatsService.todayTriggersCount)
+                    text: Loc.t("Today: %1", binaryStatsService.todayTriggersCount)
                     font.bold: true
                     font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.8
                     color: Kirigami.Theme.textColor
@@ -131,7 +131,7 @@ ColumnLayout {
             RowLayout {
                 Layout.fillWidth: true
                 PlasmaComponents3.Label {
-                    text: i18n("Last state change:")
+                    text: Loc.t("Last state change:")
                     font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.85
                     color: Kirigami.Theme.disabledTextColor
                     Layout.fillWidth: true
@@ -171,7 +171,7 @@ ColumnLayout {
                         }
 
                         PlasmaComponents3.Label {
-                            text: i18n("Lasted %1", modelData.durationStr)
+                            text: Loc.t("Lasted %1", modelData.durationStr)
                             font.bold: true
                             font.pointSize: 7.5
                             color: Kirigami.Theme.textColor

@@ -44,8 +44,8 @@ control and monitor Home Assistant from your Plasma desktop or panel.
 - O(1) device lookups (relevant with hundreds of entities).
 
 **Translations**
-- English source strings; Italian translation included. New languages are welcome
-  (see below).
+- **Internationalization:** 32 built-in languages — English (the source), plus 31 translated
+  catalogs, switched per widget in Settings → General and followed live.
 
 ---
 
@@ -65,7 +65,6 @@ kpackagetool6 --type Plasma/Applet --upgrade io.github.thepierlux.hahubrevived-2
 ```bash
 git clone https://github.com/ThePierlux/ha-hub-revived
 cd ha-hub-revived
-translate/build.sh               # compile translations
 kpackagetool6 --type Plasma/Applet --install .
 ```
 
@@ -77,11 +76,19 @@ kpackagetool6 --type Plasma/Applet --install .
 The token is stored in your local Plasma configuration only.
 
 ## Translating
-1. Copy `translate/template.pot` to `translate/<lang>.po` and translate it.
-2. Run `translate/build.sh` to compile it into the package.
-3. Open a pull request.
+Each language is a file of its own, `contents/l10n/catalogs/<code>.js`, keyed by the English
+source text. Register a new one with:
 
-Run `translate/build.sh --package` to build the `.plasmoid` archive.
+```bash
+node scripts/new-catalog.mjs <code> "<Autonym>"
+```
+
+It refuses a catalog that is incomplete, so a language cannot ship half-done: every string the
+widget can ask for has to be there, and a string left in one language only fails the same way.
+`node --test tests/js/*.test.js` checks both directions, and that the `%1`..`%3` placeholders
+survive. Open a pull request.
+
+Build the `.plasmoid` archive with `./scripts/make-plasmoid.sh`.
 
 ---
 
