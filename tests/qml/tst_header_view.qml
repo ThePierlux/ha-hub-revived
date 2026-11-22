@@ -12,6 +12,10 @@ TestCase {
         id: fakeManager
         property bool isConnected: true
         property int entitiesRevision: 1
+        // The header asks for this number by name, and a stub that does not
+        // answer leaves the placeholder in the sentence: the header used to
+        // print "Test HA · %1 entities" and nobody looked twice.
+        property int entityCount: 128
         property string serverName: "Test HA"
         property string connectionStatus: "Disconnected"
         property string primaryPersonName: "Alice"
@@ -77,7 +81,41 @@ TestCase {
     function test_greeting_and_status_are_rendered() {
         wait(50)
         var shown = texts(header, []).join(" | ")
-        verify(shown.indexOf("Test HA") !== -1, "server name is shown: " + shown)
+        // The greeting took the title line, so the server's name came down to
+        // join the count: the line under a header that has a name in it is
+        // where the answer to "which server, how many entities" now lives.
+        verify(shown.indexOf("Test HA") !== -1, "the server is named: " + shown)
+        verify(shown.indexOf(Loc.t("%1 entities", 128)) !== -1,
+                "the number of entities is shown: " + shown)
+        // A "%1" on screen means the number was never asked for, which is a
+        // defect in any language and hard to see in one that reads it as a
+        // quantity, so it is looked for by itself.
+        verify(shown.indexOf("%1") === -1, "no placeholder reaches the screen: " + shown)
+    }
+
+    // With nobody to greet, the title says what the server is called and the
+    // line under it is free to say what the connection is.
+    function test_connection_state_shows_without_a_person() {
+        fakeManager.primaryPersonName = ""
+        wait(50)
+        var shown = texts(header, []).join(" | ")
         verify(shown.indexOf(Loc.t("Connected")) !== -1, "connection state is shown: " + shown)
+        verify(shown.indexOf(Loc.t("%1 entities", 128)) !== -1,
+                "the count is still there: " + shown)
+        fakeManager.primaryPersonName = "Alice"
+        wait(50)
+    }
+
+    // The header picks between two catalog entries by the number it is given.
+    // Both have to be translations: the one the number selects used to be
+    // written inside the call, where no test could see it asking for it.
+    function test_one_entity_is_worded_as_one() {
+        fakeManager.entityCount = 1
+        wait(50)
+        var shown = texts(header, []).join(" | ")
+        verify(shown.indexOf(Loc.t("%1 entity", 1)) !== -1,
+                "one entity reads as one: " + shown)
+        fakeManager.entityCount = 128
+        wait(50)
     }
 }

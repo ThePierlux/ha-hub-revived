@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Atkārtosies pēc %2 s",
     "%1 entities": "%1 entitātes",
+    "%1 entity": "%1 entitāte",
     "%1 tiles": "%1 flīzes",
     "%1d": "%1 d",
     "%1h": "%1 st",

@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Yritetään uudelleen %2 s kuluttua",
     "%1 entities": "%1 entiteettiä",
+    "%1 entity": "%1 entiteetti",
     "%1 tiles": "%1 laattaa",
     "%1d": "%1 pv",
     "%1h": "%1 t",

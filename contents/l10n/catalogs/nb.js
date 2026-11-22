@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Prøver igjen om %2 s",
     "%1 entities": "%1 enheter",
+    "%1 entity": "%1 enhet",
     "%1 tiles": "%1 fliser",
     "%1d": "%1 d",
     "%1h": "%1 t",

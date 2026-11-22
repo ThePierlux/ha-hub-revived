@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Încercare din nou în %2 s",
     "%1 entities": "%1 entități",
+    "%1 entity": "%1 entitate",
     "%1 tiles": "%1 dale",
     "%1d": "%1 z",
     "%1h": "%1 h",
