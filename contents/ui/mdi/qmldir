@@ -1,0 +1,2 @@
+module io.github.thepierlux.hahubrevived.mdi
+singleton MdiFont 1.0 MdiFont.qml
