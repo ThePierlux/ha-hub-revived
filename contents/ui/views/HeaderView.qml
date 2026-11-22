@@ -148,9 +148,13 @@ Item {
                     if (!haManager.isConnected) return haManager.connectionStatus || Loc.t("Disconnected");
                     // The catalogs key on the English text, so the one number
                     // that decides the wording picks the key as well; a plural
-                    // rule of its own per language is not modelled here.
+                    // rule of its own per language is not modelled here. Both
+                    // keys are written out as literals rather than chosen
+                    // inside Loc.t(): the completeness test reads the first
+                    // argument of every call, and a key hidden in an expression
+                    // is a key no catalog is ever asked to have.
                     var n = haManager.entityCount;
-                    var count = Loc.t(n === 1 ? "%1 entity" : "%1 entities", n);
+                    var count = n === 1 ? Loc.t("%1 entity", n) : Loc.t("%1 entities", n);
                     // The greeting took the title line, so the server's name
                     // comes down here; otherwise the connection says what it is.
                     if (headerView.greetingInTitle && haManager.serverName) {

@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Nuevo intento en %2 s",
     "%1 entities": "%1 entidades",
+    "%1 entity": "%1 entidad",
     "%1 tiles": "%1 mosaicos",
     "%1d": "%1 d",
     "%1h": "%1 h",

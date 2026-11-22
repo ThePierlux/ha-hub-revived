@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Opakování za %2 s",
     "%1 entities": "%1 entit",
+    "%1 entity": "%1 entita",
     "%1 tiles": "%1 dlaždic",
     "%1d": "%1 d",
     "%1h": "%1 h",

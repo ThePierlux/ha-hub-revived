@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · %2 s içinde yeniden deneniyor",
     "%1 entities": "%1 varlık",
+    "%1 entity": "%1 varlık",
     "%1 tiles": "%1 karol",
     "%1d": "%1 g",
     "%1h": "%1 sa",

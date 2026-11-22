@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Bandoma vėl po %2 s",
     "%1 entities": "%1 entitetų",
+    "%1 entity": "%1 entitetas",
     "%1 tiles": "%1 plokščių",
     "%1d": "%1 d",
     "%1h": "%1 val.",

@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Opnieuw over %2 s",
     "%1 entities": "%1 entiteiten",
+    "%1 entity": "%1 entiteit",
     "%1 tiles": "%1 tegels",
     "%1d": "%1 d",
     "%1h": "%1 u",

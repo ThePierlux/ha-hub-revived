@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Ponowna próba za %2 s",
     "%1 entities": "%1 encji",
+    "%1 entity": "%1 encja",
     "%1 tiles": "%1 kafelków",
     "%1d": "%1 d",
     "%1h": "%1 g",

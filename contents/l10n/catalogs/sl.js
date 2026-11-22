@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1 · Ponovni poskus čez %2 s",
     "%1 entities": "%1 entitet",
+    "%1 entity": "%1 entiteta",
     "%1 tiles": "%1 ploščic",
     "%1d": "%1 d",
     "%1h": "%1 h",

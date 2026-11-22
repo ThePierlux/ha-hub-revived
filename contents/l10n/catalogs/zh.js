@@ -9,6 +9,7 @@
 export default {
     "%1 Retrying in %2 s": "%1，%2 秒后重试",
     "%1 entities": "%1 个实体",
+    "%1 entity": "%1 个实体",
     "%1 tiles": "%1 磁贴",
     "%1d": "%1 天",
     "%1h": "%1 小时",
