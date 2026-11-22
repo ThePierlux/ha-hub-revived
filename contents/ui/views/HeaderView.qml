@@ -19,7 +19,10 @@ Item {
     readonly property var viewModes: [
         { mode: "rows",  icon: "rows",  label: Loc.t("Rows") },
         { mode: "tiles", icon: "grid",  label: Loc.t("Tiles") },
-        { mode: "cards", icon: "cards", label: Loc.t("Cards") }
+        { mode: "cards", icon: "cards", label: Loc.t("Cards") },
+        // Named after the settings page rather than after the style, so the
+        // word is one the 31 catalogs already agree on.
+        { mode: "metro", icon: "metro", label: Loc.t("Dashboard") }
     ]
     readonly property var currentMode: {
         var m = fullRoot ? fullRoot.viewMode : "rows";

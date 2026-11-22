@@ -26,6 +26,11 @@ ConfigModel {
         source: "settings/ConfigGeneral.qml"
     }
     ConfigCategory {
+        name: Loc.t("Dashboard")
+        icon: "view-grid-symbolic"
+        source: "settings/ConfigDashboard.qml"
+    }
+    ConfigCategory {
         name: Loc.t("Favorite Devices")
         icon: "starred-symbolic"
         source: "settings/ConfigFavorites.qml"

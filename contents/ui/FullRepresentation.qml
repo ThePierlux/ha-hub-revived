@@ -34,6 +34,15 @@ PlasmaComponents3.Page {
         else if (showSearchBar) showSearchBar = false;
     }
 
+    // The Metro dashboard keeps its whole layout in one JSON string, so this
+    // page only hands the configuration down; see contents/code/dashboard_model.mjs.
+    readonly property string dashboardGroups: Plasmoid.configuration.dashboardGroups || ""
+    readonly property string dashboardCards: Plasmoid.configuration.dashboardCards || "[]"
+    readonly property int dashboardColumns: Plasmoid.configuration.dashboardColumns || 4
+    readonly property string dashboardTileContent: Plasmoid.configuration.dashboardTileContent || "both"
+    readonly property string dashboardFontFamily: Plasmoid.configuration.dashboardFontFamily || ""
+    readonly property real dashboardFontSize: Plasmoid.configuration.dashboardFontSize || 0
+
     function setViewMode(mode) {
         fullRoot.viewMode = mode;
         Plasmoid.configuration.viewMode = mode;
@@ -83,6 +92,7 @@ PlasmaComponents3.Page {
             var hasData = haManager && haManager.allEntitiesList && haManager.allEntitiesList.length > 0;
             if (!haManager || (!haManager.isConnected && !hasData)) return authWizardComp;
             if (fullRoot.activeDetailEntityId.length > 0) return detailsPageComp;
+            if (fullRoot.viewMode === "metro") return metroViewComp;
             return deviceViewComp;
         }
     }
@@ -93,6 +103,21 @@ PlasmaComponents3.Page {
             haManager: fullRoot.haManager
             primaryEntityId: fullRoot.activeDetailEntityId
             onBackRequested: fullRoot.activeDetailEntityId = ""
+        }
+    }
+
+    Component {
+        id: metroViewComp
+        Views.DashboardView {
+            haManager: fullRoot.haManager
+            groupsJson: fullRoot.dashboardGroups
+            legacyCardsJson: fullRoot.dashboardCards
+            columns: fullRoot.dashboardColumns
+            tileContent: fullRoot.dashboardTileContent
+            fontFamily: fullRoot.dashboardFontFamily
+            fontSize: fullRoot.dashboardFontSize
+            onConfigureRequested: fullRoot.configureRequested()
+            onOpenDetailsRequested: function(entId) { fullRoot.activeDetailEntityId = entId; }
         }
     }
 

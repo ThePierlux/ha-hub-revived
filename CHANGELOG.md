@@ -20,6 +20,21 @@ commit after it is checked by it.
   asks for is looked for in every catalog, and every catalog entry is looked for
   in the interface, in both directions, with the `%1`..`%3` placeholders
   compared key by key.
+- **Material Design Icons**, the icon set Home Assistant names its entity icons
+  in, is bundled (`contents/fonts/`, SIL OFL) and drawn from: an entity given a
+  light in Home Assistant shows that light in the list, the tile and the card.
+  Entities with no icon of their own keep the widget's own monochrome set, which
+  covers every domain the lists show.
+- **The Metro dashboard** — a fourth view, next to rows, tiles and cards, with
+  flat coloured tiles packed into a grid, tile groups of its own, and a settings
+  page to arrange them (`Settings → Dashboard`). Tiles are sized by the width of
+  the popup alone, which is what stops the grid from feeding its own width back
+  into the tiles and growing without end.
+- The connection layer is one file again, with the best of both: Home
+  Assistant's registries and the entity catalog (areas, floors, labels, hidden
+  and diagnostic flags, per-entity titles) from 1.3.1, and the widget's own
+  active ping every 25 s and tab lists that are rebuilt only when the set of
+  entities moves.
 
 ### Changed
 - Strings are translated through `Loc.t()` and the catalogs rather than
@@ -29,6 +44,8 @@ commit after it is checked by it.
   `failureReason` for the purpose. It used to be cut out of the line the header
   shows — with an Italian-only pattern — which is why a widget in any other
   language repeated the previous message.
+- The default host of a fresh setup is `homeassistant.local`, the name Home
+  Assistant publishes itself, instead of an address nobody has typed yet.
 
 ## [2.0.1] - 2026-11-19
 
