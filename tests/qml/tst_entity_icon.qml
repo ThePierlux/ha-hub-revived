@@ -100,7 +100,6 @@ TestCase {
         compare(findByObjectName(fontlessIcon, "entityIconTheme")[0].source,
                 "media-flash-symbolic")
     }
-}
 
     function test_bundled_asset_is_drawn_as_a_mask() {
         compare(assetIcon.isMdi, false, "an asset name is not a font glyph")
@@ -112,3 +111,4 @@ TestCase {
         compare(findByObjectName(assetIcon, "entityIconTheme").length, 0,
                 "the icon theme is not asked for a file we ship")
     }
+}
