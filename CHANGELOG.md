@@ -30,6 +30,13 @@ commit after it is checked by it.
   page to arrange them (`Settings → Dashboard`). Tiles are sized by the width of
   the popup alone, which is what stops the grid from feeding its own width back
   into the tiles and growing without end.
+- **Settings → Appearance**: a person for the widget to greet, one entity whose
+  value is read off the header, and what the panel or tray icon shows — a theme
+  icon or a picture of your own, following the connection by default.
+- **Names of your own**: any entity can be renamed in the widget (Settings →
+  Dashboard), and the name is used everywhere the entity appears — the list, the
+  tiles, the cards, the pickers — because every view asks the manager for the
+  name rather than computing one.
 - The connection layer is one file again, with the best of both: Home
   Assistant's registries and the entity catalog (areas, floors, labels, hidden
   and diagnostic flags, per-entity titles) from 1.3.1, and the widget's own

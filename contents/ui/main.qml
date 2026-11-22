@@ -5,11 +5,24 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 import "../services" as Services
 import "components" as Components
+import "../code/ha_helpers.mjs" as HAHelpers
 import "../l10n"
+
 PlasmoidItem {
     id: root
 
-    Plasmoid.icon: Qt.resolvedUrl("../icons/home.svg")
+    // Settings -> Appearance: which icon the panel and the tray show. "auto"
+    // follows the connection, and a picture wins over a theme name because a
+    // user who picked a picture means that picture.
+    readonly property var trayIcon: HAHelpers.resolveIconChoice(
+        Plasmoid.configuration.trayIconMode || "auto",
+        Plasmoid.configuration.trayIconName || "",
+        Plasmoid.configuration.trayIconPath || "",
+        "network-server-symbolic", "network-offline",
+        haManagerService ? haManagerService.isConnected : false)
+
+    Plasmoid.icon: trayIcon.path.length > 0 ? trayIcon.path
+        : (trayIcon.name.length > 0 ? trayIcon.name : Qt.resolvedUrl("../icons/home.svg"))
     Plasmoid.title: "HA-Hub"
 
     // On the desktop we draw our own rounded, theme-tinted background so the
@@ -87,14 +100,27 @@ PlasmoidItem {
         useSsl: Plasmoid.configuration.useSsl || false
         accessToken: Plasmoid.configuration.accessToken || ""
         serverName: Plasmoid.configuration.serverName || "Home Assistant"
+        // The names the user gave entities. Every view asks the manager for a
+        // name, so one binding renames the tiles, the list and the cards.
+        entityAliases: Plasmoid.configuration.entityAliases || "{}"
+        // The two toggles on the Favorites page, so they reach the views and not
+        // only that page's own preview.
+        includeHiddenEntities: Plasmoid.configuration.showHiddenEntities || false
+        includeDiagnosticEntities: Plasmoid.configuration.showDiagnosticEntities || false
     }
 
     Component.onCompleted: {
-        haManagerService.startAutoConnect();
+        if (Plasmoid.configuration.autoConnect !== false) {
+            haManagerService.startAutoConnect();
+        } else {
+            haManagerService.connectionStatus = Loc.t("Auto-connect is disabled in settings");
+        }
     }
 
     compactRepresentation: CompactRepresentation {
         haManager: haManagerService
+        preferredIconName: root.trayIcon.name
+        preferredImagePath: root.trayIcon.path
         onClicked: root.expanded = !root.expanded
     }
 

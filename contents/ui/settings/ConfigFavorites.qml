@@ -5,26 +5,28 @@ import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import "../../services" as Services
-import "../../code/ha_helpers.mjs" as HAHelpers
 import "../components" as Components
+import "../../code/ha_helpers.mjs" as HAHelpers
 import "../../l10n"
+
 Kirigami.Page {
     id: favoritesSettings
-    // Plasma's own title for a page is read before this page's bridge has set
-    // the language, and an assignment breaks the binding - so the heading is
-    // re-asserted here, as it is on the General page.
+    // The page's own heading. Plasma assigns a title of its own when it opens a
+    // page - the category name it read *before* this page's bridge had set the
+    // language, from a copy made while the dialog was still in the system
+    // language - and an assignment breaks the binding, so the heading of the
+    // first page opened kept that language. Re-asserting it here, and whenever
+    // the language moves, puts the right one back.
     readonly property string pageTitle: Loc.t("Favorite Devices")
     title: pageTitle
     onPageTitleChanged: favoritesSettings.title = favoritesSettings.pageTitle
 
-    implicitWidth: Kirigami.Units.gridUnit * 34
-    implicitHeight: Kirigami.Units.gridUnit * 28
-
-    // The settings dialog is painted by an engine of its own, which knows
-    // nothing about the language until a page of it says so. Handed over where
-    // Plasma lets a page see the configuration at all; a page normally cannot,
-    // and then the language travels the Plasma way - through cfg_ and Apply.
+    // This dialog has its own Loc instance: without the bridge every page here
+    // would stay in the system language no matter what is configured.
     Components.LanguageBridge {
+        // Handed over where Plasma lets a settings page see the configuration
+        // at all; a page normally cannot, and then the language is saved the
+        // Plasma way - through the cfg_ property and Apply.
         configuration: (typeof Plasmoid !== "undefined" && Plasmoid && Plasmoid.configuration)
             ? Plasmoid.configuration : null
     }
@@ -34,8 +36,9 @@ Kirigami.Page {
     property bool cfg_useSsl: false
     property string cfg_accessToken: ""
     property string cfg_favoriteEntities: "[]"
+    property bool cfg_showHiddenEntities: false
+    property bool cfg_showDiagnosticEntities: false
 
-    property string searchFilter: ""
     property int currentTab: 0
 
     property var favoriteSet: ({})
@@ -46,18 +49,32 @@ Kirigami.Page {
         host: favoritesSettings.cfg_host
         port: parseInt(favoritesSettings.cfg_port) || 8123
         useSsl: favoritesSettings.cfg_useSsl
-        accessToken: favoritesSettings.cfg_accessToken
+        includeHiddenEntities: favoritesSettings.cfg_showHiddenEntities
+        includeDiagnosticEntities: favoritesSettings.cfg_showDiagnosticEntities
+        // Deliberately no `cfg_entityAliases` here. Apply writes the keys the
+        // *current* page holds, so a page that was opened before a rename on
+        // another page would write the names back as they were before it. Names
+        // are edited on the Dashboard page, so names live on the Dashboard page.
+    }
+
+    // Connect only once the page is actually shown for the first time (the
+    // settings dialog builds every page up front); see ConfigDashboard.
+    property bool managerStarted: false
+
+    function maybeStartManager() {
+        if (managerStarted) return;
+        managerStarted = true;
+        // HAManager prefers the shared credential store; startAutoConnect()
+        // loads from it and connects when credentials exist.
+        haManager.startAutoConnect();
     }
 
     Component.onCompleted: {
-        if (!favoritesSettings.cfg_host || favoritesSettings.cfg_host.length === 0 ||
-            !favoritesSettings.cfg_accessToken || favoritesSettings.cfg_accessToken.length === 0) {
-            haManager.loadSharedCredentials();
-        } else {
-            haManager.startAutoConnect();
-        }
+        if (visible) maybeStartManager();
         favoritesSettings.loadFavoriteSet();
+        favoritesSettings.title = favoritesSettings.pageTitle;
     }
+    onVisibleChanged: if (visible) maybeStartManager()
 
     onCfg_favoriteEntitiesChanged: {
         favoritesSettings.loadFavoriteSet();
@@ -140,11 +157,15 @@ Kirigami.Page {
         }
 
         var entObj = haManager.getEntity(cleanId);
-        var devId = haManager.entityToDeviceMap ? (haManager.entityToDeviceMap[cleanId] || "") : "";
-        // Entity name, not device name: multi-gang channels share one device
-        var title = HAHelpers.getEntityTitle(cleanId, entObj);
+        var regInfo = haManager.getEntityRegistry ? haManager.getEntityRegistry(cleanId) : null;
+        var entry = haManager.getCatalogEntry ? haManager.getCatalogEntry(cleanId) : null;
+        var title = entry && entry.name ? entry.name : HAHelpers.getEntityTitle(cleanId, entObj, regInfo, haManager);
         var areaName = HAHelpers.getAreaName(cleanId, haManager);
-        var statusText = HAHelpers.getStatusDetailsText(cleanId, entObj, devId, haManager);
+        var entry = haManager.getCatalogEntry ? haManager.getCatalogEntry(cleanId) : null;
+        var deviceName = entry && entry.deviceName ? entry.deviceName : "";
+        var domain = HAHelpers.getDomain(cleanId);
+        var devId = entry && entry.deviceId ? entry.deviceId : (haManager.entityToDeviceMap ? (haManager.entityToDeviceMap[cleanId] || "") : "");
+        var statusText = HAHelpers.getStatusDetailsText(cleanId, entObj, devId, haManager, Loc.language);
 
         var isUnavailable = (!entObj || entObj.state === "unavailable" || entObj.state === "unknown");
         var isOn = !isUnavailable && (entObj.state === "on" || entObj.state === "home" || entObj.state === "open" || entObj.state === "playing" || entObj.state === "unlocked");
@@ -152,45 +173,83 @@ Kirigami.Page {
         return {
             title: title,
             areaName: areaName,
+            deviceName: deviceName,
+            domain: domain,
             statusText: statusText,
             isOn: isOn,
             isUnavailable: isUnavailable
         };
     }
 
-    // Every visible entity (one per channel of multi-gang switches, template
-    // switches without a device, ...), not just one "primary" entity per device.
     readonly property var rawAllEntitiesList: {
-        var rev = haManager ? haManager.listsRevision : 0;
-        return (haManager && haManager.allEntitiesList) ? haManager.allEntitiesList : [];
+        var rev = haManager ? haManager.entitiesRevision : 0;
+        return (haManager && haManager.userDevicesList) ? haManager.userDevicesList : [];
+    }
+
+    // domain -> count over the full list (chip labels never change while
+    // filtering, only the rows below do).
+    readonly property var domainCounts: {
+        var rev = haManager ? haManager.entitiesRevision : 0;
+        var source = favoritesSettings.rawAllEntitiesList || [];
+        var counts = {};
+        for (var i = 0; i < source.length; i++) {
+            var domain = HAHelpers.getDomain(source[i]);
+            if (!domain) continue;
+            counts[domain] = (counts[domain] || 0) + 1;
+        }
+        return counts;
+    }
+
+    readonly property var areaOptions: {
+        var rev = haManager ? haManager.entitiesRevision : 0;
+        var areas = (haManager && haManager.areasList) ? haManager.areasList : [];
+        var result = [];
+        for (var i = 0; i < areas.length; i++) {
+            var id = areas[i].area_id || areas[i].id || "";
+            if (!id) continue;
+            result.push({ id: id, name: areas[i].name || id });
+        }
+        result.sort(function(a, b) { return a.name.localeCompare(b.name); });
+        return result;
+    }
+
+    function entityMatchesFilters(entId) {
+        var filterText = entityFilter.searchText.toLowerCase().trim();
+        var domain = entityFilter.selectedDomain;
+        var area = entityFilter.selectedArea;
+
+        var info = favoritesSettings.getLiveDeviceInfo(entId);
+        if (domain !== "all" && info.domain !== domain) return false;
+        if (area !== "all") {
+            var clean = HAHelpers.cleanEntityId(entId);
+            var entry = haManager && haManager.getCatalogEntry ? haManager.getCatalogEntry(clean) : null;
+            if (!entry || (entry.areaId || "") !== area) return false;
+        }
+        if (filterText.length === 0) return true;
+        return info.title.toLowerCase().indexOf(filterText) !== -1 ||
+               entId.toLowerCase().indexOf(filterText) !== -1 ||
+               info.statusText.toLowerCase().indexOf(filterText) !== -1 ||
+               info.areaName.toLowerCase().indexOf(filterText) !== -1 ||
+               info.deviceName.toLowerCase().indexOf(filterText) !== -1 ||
+               info.domain.toLowerCase().indexOf(filterText) !== -1;
     }
 
     readonly property var filteredAllEntitiesList: {
         var list = favoritesSettings.rawAllEntitiesList || [];
-        var filterText = favoritesSettings.searchFilter.toLowerCase().trim();
-        if (filterText.length === 0) return list;
-
-        return list.filter(function(entId) {
-            var info = favoritesSettings.getLiveDeviceInfo(entId);
-            return info.title.toLowerCase().indexOf(filterText) !== -1 ||
-                   entId.toLowerCase().indexOf(filterText) !== -1 ||
-                   info.statusText.toLowerCase().indexOf(filterText) !== -1 ||
-                   info.areaName.toLowerCase().indexOf(filterText) !== -1;
-        });
+        // Read filter-bar properties here so this binding re-evaluates
+        // when they change (method calls alone may not register deps).
+        var tb = entityFilter.searchText;
+        var d = entityFilter.selectedDomain;
+        var a = entityFilter.selectedArea;
+        return list.filter(function(entId) { return favoritesSettings.entityMatchesFilters(entId); });
     }
 
     readonly property var filteredFavEntitiesList: {
         var list = favoritesSettings.favEntitiesArray || [];
-        var filterText = favoritesSettings.searchFilter.toLowerCase().trim();
-        if (filterText.length === 0) return list;
-
-        return list.filter(function(entId) {
-            var info = favoritesSettings.getLiveDeviceInfo(entId);
-            return info.title.toLowerCase().indexOf(filterText) !== -1 ||
-                   entId.toLowerCase().indexOf(filterText) !== -1 ||
-                   info.statusText.toLowerCase().indexOf(filterText) !== -1 ||
-                   info.areaName.toLowerCase().indexOf(filterText) !== -1;
-        });
+        var tb = entityFilter.searchText;
+        var d = entityFilter.selectedDomain;
+        var a = entityFilter.selectedArea;
+        return list.filter(function(entId) { return favoritesSettings.entityMatchesFilters(entId); });
     }
 
     ColumnLayout {
@@ -266,12 +325,11 @@ Kirigami.Page {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
 
-            Controls.TextField {
-                id: searchInput
-                placeholderText: Loc.t("Search device by name or ID...")
+            Components.EntityFilterBar {
+                id: entityFilter
                 Layout.fillWidth: true
-                text: favoritesSettings.searchFilter
-                onTextChanged: favoritesSettings.searchFilter = text
+                domainCounts: favoritesSettings.domainCounts
+                areaOptions: favoritesSettings.areaOptions
             }
 
             PlasmaComponents3.TabBar {
@@ -290,6 +348,31 @@ Kirigami.Page {
                 }
                 PlasmaComponents3.TabButton {
                     text: Loc.t("Favorites (%1)", favoritesSettings.favEntitiesArray.length)
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+
+                Controls.CheckBox {
+                    text: Loc.t("Hidden")
+                    checked: favoritesSettings.cfg_showHiddenEntities
+                    onToggled: favoritesSettings.cfg_showHiddenEntities = checked
+                }
+
+                Controls.CheckBox {
+                    text: Loc.t("Diagnostic / config")
+                    checked: favoritesSettings.cfg_showDiagnosticEntities
+                    onToggled: favoritesSettings.cfg_showDiagnosticEntities = checked
+                }
+
+                Item { Layout.fillWidth: true }
+
+                PlasmaComponents3.Label {
+                    text: Loc.t("%1 entities", favoritesSettings.rawAllEntitiesList.length)
+                    font.pointSize: Kirigami.Theme.smallFont.pointSize * 0.78
+                    color: Kirigami.Theme.disabledTextColor
                 }
             }
         }
@@ -407,7 +490,9 @@ Kirigami.Page {
                         }
 
                         PlasmaComponents3.Label {
-                            text: delegateRoot.entId
+                            text: delegateRoot.liveInfo.deviceName.length > 0
+                                ? (delegateRoot.entId + "  •  " + delegateRoot.liveInfo.deviceName)
+                                : delegateRoot.entId
                             font.pointSize: Kirigami.Theme.smallFont.pointSize
                             color: Kirigami.Theme.disabledTextColor
                             opacity: 0.75
