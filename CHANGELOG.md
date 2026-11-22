@@ -5,11 +5,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work in progress on the `feat/ha-hub-1.3.1` branch: the widget gains the
-Home Assistant 1.3.1 feature set developed by Sergey Alexeyev on top of the
-2.0 architecture of this fork — 30 languages, Home Assistant's own entity
-icons, the Metro tile dashboard, device history and logbook, multi-channel
-devices, a test suite and CI.
+The widget gains the Home Assistant feature set developed by Sergey Alexeyev on
+top of this fork's 2.0 architecture — the language layer first, since every
+commit after it is checked by it.
+
+### Added
+- The widget speaks 32 languages in all: 31 catalogs, one file each under
+  `contents/l10n/catalogs/`, keyed by the English source text. English is the
+  source, not a catalog, and the language is picked per widget in
+  Settings → General and followed live.
+- `scripts/new-catalog.mjs` registers a language — code, autonym, strings — and
+  refuses one that is incomplete, so a language cannot ship half-done.
+- The tests that make that promise mean something: every string the interface
+  asks for is looked for in every catalog, and every catalog entry is looked for
+  in the interface, in both directions, with the `%1`..`%3` placeholders
+  compared key by key.
+
+### Changed
+- Strings are translated through `Loc.t()` and the catalogs rather than
+  Plasma's `.mo` catalogs, which is why `translate/` is gone: Italian came over
+  with them, as `catalogs/it.js`.
+- The retry notice is built from the reason a connection dropped, kept in
+  `failureReason` for the purpose. It used to be cut out of the line the header
+  shows — with an Italian-only pattern — which is why a widget in any other
+  language repeated the previous message.
 
 ## [2.0.1] - 2026-11-19
 

@@ -15,8 +15,17 @@ const vm = require("node:vm");
 
 const ROOT = path.join(__dirname, "..", "..");
 
+// A module is loaded once per process, the way a QML engine evaluates a given
+// URL once and shares it: the helpers translate through the state of the very
+// translations module that Loc.qml sets, and a test that wants to prove that
+// has to be handed the same object twice, not two copies of it.
+const loaded = new Map();
+
 function loadLibrary(relativePath) {
-    let source = fs.readFileSync(path.join(ROOT, relativePath), "utf8");
+    const full = path.resolve(ROOT, relativePath);
+    if (loaded.has(full)) return loaded.get(full);
+
+    let source = fs.readFileSync(full, "utf8");
     source = source.replace(/^\.pragma library\s*/m, "");
     const context = { console, __defaultExport: undefined };
     vm.createContext(context);
@@ -47,6 +56,7 @@ function loadLibrary(relativePath) {
     source = source.replace(/^export\s+default\s+/gm, "__defaultExport = ");
     vm.runInContext(source, context, { filename: relativePath });
     context.default = context.__defaultExport;
+    loaded.set(full, context);
     return context;
 }
 

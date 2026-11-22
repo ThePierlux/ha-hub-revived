@@ -3,9 +3,9 @@ import QtQuick.LocalStorage
 import QtWebSockets
 import org.kde.plasma.plasmoid
 import "../code/ha_client.js" as HAClient
-import "../code/ha_helpers.js" as HAHelpers
+import "../code/ha_helpers.mjs" as HAHelpers
 import "../code/ha_storage.js" as HAStorage
-
+import "../l10n"
 Item {
     id: manager
 
@@ -16,7 +16,13 @@ Item {
     property string serverName: (typeof Plasmoid !== "undefined" && Plasmoid && Plasmoid.configuration) ? (Plasmoid.configuration.serverName || "Home Assistant") : "Home Assistant"
 
     property string state: "DISCONNECTED"
-    property string connectionStatus: i18n("Disconnected")
+    property string connectionStatus: Loc.t("Disconnected")
+
+    // Why the last connection ended, in the language it was painted in. The
+    // retry line below is "reason + delay", and reading the reason back out of
+    // `connectionStatus` meant cutting the previous translation off the end of
+    // it - which only worked in the one language the cut was written for.
+    property string failureReason: ""
     property bool isConnected: false
     property bool autoReconnectAllowed: true
 
@@ -322,7 +328,7 @@ Item {
                 // Previous ping never answered: the connection is dead
                 console.warn("HA-hub: no pong received, reconnecting");
                 manager._awaitingPong = false;
-                manager._dropAndReconnect(i18n("Connection lost, reconnecting…"));
+                manager._dropAndReconnect(Loc.t("Connection lost, reconnecting…"));
                 return;
             }
             manager._awaitingPong = true;
@@ -336,6 +342,7 @@ Item {
         connTimeoutTimer.stop();
         manager.isConnected = false;
         manager.state = "ERROR";
+        manager.failureReason = statusText;
         manager.connectionStatus = statusText;
         if (webSocket.status === WebSocket.Open || webSocket.status === WebSocket.Connecting) {
             manager._isManualDisconnecting = true;
@@ -352,7 +359,8 @@ Item {
         manager._reconnectAttempts++;
         autoReconnectTimer.interval = delay;
         autoReconnectTimer.restart();
-        manager.connectionStatus = i18n("%1 Retrying in %2 s", manager.connectionStatus.replace(/ Nuovo tentativo.*$/, ""), Math.round(delay / 1000));
+        var reason = manager.failureReason.length > 0 ? manager.failureReason : Loc.t("Reconnecting");
+        manager.connectionStatus = Loc.t("%1 Retrying in %2 s", reason, Math.round(delay / 1000));
     }
 
     function reconnect() {
@@ -378,7 +386,7 @@ Item {
         onTriggered: {
             if (manager.state === "AUTHENTICATING" || manager.state === "DISCOVERING") {
                 console.warn("HA-hub: Connection timed out for host:", manager.host);
-                manager._dropAndReconnect(i18n("Connection to %1 timed out.", manager.host));
+                manager._dropAndReconnect(Loc.t("Connection to %1 timed out.", manager.host));
             }
         }
     }
@@ -400,9 +408,9 @@ Item {
             connTimeoutTimer.stop();
             manager.discoveredServers = serverList;
             if (serverList.length > 0) {
-                manager.connectionStatus = i18n("Servers found: %1", serverList.length);
+                manager.connectionStatus = Loc.t("Servers found: %1", serverList.length);
             } else {
-                manager.connectionStatus = i18n("No servers found on the local network");
+                manager.connectionStatus = Loc.t("No servers found in local network");
             }
         }
     }
@@ -416,15 +424,16 @@ Item {
                 manager._isManualDisconnecting = false;
             } else if (webSocket.status === WebSocket.Error) {
                 connTimeoutTimer.stop();
-                var err = webSocket.errorString || i18n("Unable to reach the server");
+                var err = webSocket.errorString || Loc.t("Unable to connect to server");
                 var msg;
                 if (manager.useSsl && (err.indexOf("wrong version number") !== -1 || err.indexOf("SSL routines") !== -1 || err.indexOf("handshake") !== -1)) {
-                    msg = i18n("SSL error: the server does not use SSL. Disable “wss://”.");
+                    msg = Loc.t("SSL error: the server does not use SSL. Disable “wss://”.");
                 } else {
-                    msg = i18n("Error: %1.", err);
+                    msg = Loc.t("Error: %1.", err);
                 }
                 manager.state = "ERROR";
                 manager.isConnected = false;
+                manager.failureReason = msg;
                 manager.connectionStatus = msg;
                 manager._scheduleReconnect();
             } else if (webSocket.status === WebSocket.Closed) {
@@ -437,7 +446,8 @@ Item {
 
                 if (manager.state !== "ERROR") {
                     manager.state = "DISCONNECTED";
-                    manager.connectionStatus = i18n("Connection closed.");
+                    manager.failureReason = Loc.t("Connection closed.");
+                    manager.connectionStatus = manager.failureReason;
                 }
                 manager.isConnected = false;
                 manager._scheduleReconnect();
@@ -472,7 +482,7 @@ Item {
     function _connectSocket() {
         if (!accessToken || accessToken.length === 0) {
             state = "ERROR";
-            connectionStatus = i18n("Please enter the access token");
+            connectionStatus = Loc.t("Please enter Access Token");
             return;
         }
 
@@ -486,7 +496,7 @@ Item {
 
         connTimeoutTimer.restart();
         state = "AUTHENTICATING";
-        connectionStatus = i18n("Connecting to %1:%2…", host, port);
+        connectionStatus = Loc.t("Connecting to %1:%2...", host, port);
 
         var protocol = useSsl ? "wss://" : "ws://";
         var targetUrl = protocol + host + ":" + port + "/api/websocket";
@@ -507,7 +517,7 @@ Item {
     function runAutoDiscovery() {
         if (mdns && mdns.isSearching) return;
         manager.discoveredServers = [];
-        connectionStatus = i18n("Searching for servers on the network…");
+        connectionStatus = Loc.t("Searching for servers in network...");
         mdns.startDiscovery(host);
     }
 
@@ -542,7 +552,7 @@ Item {
         webSocket.active = false;
         _awaitingPong = false;
         state = "DISCONNECTED";
-        connectionStatus = i18n("Disconnected");
+        connectionStatus = Loc.t("Disconnected");
         isConnected = false;
     }
 
@@ -575,7 +585,8 @@ Item {
             autoReconnectTimer.stop();
             isConnected = true;
             state = "CONNECTED";
-            connectionStatus = i18n("Connected");
+            manager.failureReason = "";
+            connectionStatus = Loc.t("Connected");
             _reconnectAttempts = 0;
             _awaitingPong = false;
             _listsDirty = true;
@@ -590,7 +601,8 @@ Item {
             autoReconnectTimer.stop();
             manager.disconnectFromHA();
             state = "ERROR";
-            connectionStatus = i18n("Invalid access token");
+            failureReason = Loc.t("Invalid Access Token");
+            connectionStatus = failureReason;
             return;
         }
 
