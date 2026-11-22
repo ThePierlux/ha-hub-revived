@@ -218,13 +218,15 @@ Kirigami.ScrollablePage {
             model: [
                 { text: Loc.t("Rows"), value: "rows" },
                 { text: Loc.t("Tiles"), value: "tiles" },
-                { text: Loc.t("Cards (Liquid Glass)"), value: "cards" }
+                { text: Loc.t("Cards (Liquid Glass)"), value: "cards" },
+                { text: Loc.t("Dashboard"), value: "metro" }
             ]
             textRole: "text"
             valueRole: "value"
             currentIndex: {
                 if (generalSettings.cfg_viewMode === "tiles") return 1;
                 if (generalSettings.cfg_viewMode === "cards") return 2;
+                if (generalSettings.cfg_viewMode === "metro") return 3;
                 return 0;
             }
             onActivated: {
