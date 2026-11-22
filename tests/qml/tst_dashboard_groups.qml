@@ -66,24 +66,22 @@ TestCase {
         height: 90
         visible: true
         entityId: "light.corridor"
-        size: "medium"
         contentMode: "both"
         presentation: ({ title: "Свет в коридоре", status: "", icon: "lightbulb",
                          iconKind: "mdi", fallbackIcon: "brightness-high-symbolic",
                          domain: "light", kind: "toggle", isOn: true, unavailable: false })
     }
 
-    // A row-sized tile (1 column at a 3-column popup) used for typography
-    // checks, so the name tests never touch the presentation of `tile`. The
-    // height mirrors what DashboardGroup really gives a row, so these checks
-    // follow the layout instead of a frozen pixel number.
+    // A tile of the width one column gives in a narrow popup, used for
+    // typography checks, so the name tests never touch the presentation of
+    // `tile`. The height mirrors what DashboardGroup really gives a row, so
+    // these checks follow the layout instead of a frozen pixel number.
     Components.MetroTile {
         id: rowTile
         width: 150
         height: Math.round(Kirigami.Units.gridUnit * 3.1)
         visible: true
         entityId: "light.corridor"
-        size: "small"
         contentMode: "both"
         presentation: ({
             title: "Настенная лампа в детской комнате у окна справа", status: "On",
@@ -101,7 +99,6 @@ TestCase {
         height: Math.round(Kirigami.Units.gridUnit * 3.1)
         visible: true
         entityId: "light.corridor"
-        size: "small"
         contentMode: "both"
         presentation: ({
             title: "Люстра дома", status: "On",
@@ -119,7 +116,7 @@ TestCase {
         group: ({
             id: "gx", name: "Corridor", color: "#0078d7",
             tiles: [
-                { entityId: "light.corridor", size: "small", content: "" },
+                { entityId: "light.corridor", size: "double", content: "" },
                 { entityId: "sensor.outside", size: "wide", content: "" }
             ]
         })
@@ -277,7 +274,11 @@ TestCase {
         ])
         compare(view.groups.length, 1)
         compare(view.groups[0].name, "")
-        compare(view.groups[0].tiles[0].size, "small")
+        // The card footprints carried over as the tile widths they mean now:
+        // a 1x1 is one column, a 2x2 keeps its two columns and loses the row
+        // it could never fill, since every tile is one compact row tall.
+        compare(view.groups[0].tiles[0].size, "medium")
+        compare(view.groups[0].tiles[1].size, "double")
 
         view.groupsJson = "[]"
         compare(view.groups.length, 0, "a deliberately emptied dashboard stays empty")
@@ -318,9 +319,13 @@ TestCase {
         compare(tile.showIcon, false)
         compare(tile.showTitle, true)
         tile.contentMode = "both"
-        tile.size = "small"
-        compare(tile.showTitle, true, "every tile size keeps the label: tiles are for reading")
-        tile.size = "medium"
+        // A size reaches the tile as a width now, so the promise that a tile is
+        // for reading is checked the way the grid enforces it: at the width of
+        // the narrowest column a wide popup gives, and at a full row.
+        var rowWidth = tile.width
+        tile.width = 70
+        compare(tile.showTitle, true, "a narrow tile keeps the label: tiles are for reading")
+        tile.width = rowWidth
 
         tile.presentation = ({ title: "Fan", icon: "f", kind: "toggle", unavailable: true })
         verify(tile.isUnavailable, "an unavailable presentation is flagged")
@@ -428,10 +433,11 @@ TestCase {
 
         var tiles = findByObjectName(group, "metroTile")
         compare(tiles.length, 2)
-        // small = 1 column wide at the grid origin, one row tall...
+        // A double tile takes two of the four columns at the grid origin, one
+        // row tall...
         compare(tiles[0].x, 0)
         compare(tiles[0].y, 0)
-        fuzzyCompare(tiles[0].width, group.unit, 0.01)
+        fuzzyCompare(tiles[0].width, 2 * group.unit + spacing, 0.01)
         fuzzyCompare(tiles[0].height, group.tileHeight, 0.01)
         // ...wide = all four columns directly below it.
         fuzzyCompare(tiles[1].x, 0, 0.01)

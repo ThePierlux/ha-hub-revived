@@ -39,12 +39,14 @@ Item {
     property color tileColor: Kirigami.Theme.highlightColor
     // "both" | "title" | "icon" - already resolved (tile override or default).
     property string contentMode: "both"
-    // "small" | "medium" | "wide"
-    property string size: "medium"
+
+    // How wide a tile is belongs to the grid, not to the tile: DashboardGroup
+    // places it from tileSpan() and this item is told the result as a width. A
+    // size kept here would be a second copy of that, and the first thing to
+    // disagree with the grid.
 
     signal openDetailsRequested(string entId)
 
-    readonly property bool compactTile: size === "small"
     readonly property bool isIconMode: contentMode === "icon"
     readonly property bool showIcon: contentMode !== "title"
     readonly property bool showTitle: contentMode !== "icon"
@@ -183,7 +185,7 @@ Item {
     // nothing else.
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: metroTile.compactTile ? 4 : Kirigami.Units.smallSpacing * 0.9
+        anchors.margins: Kirigami.Units.smallSpacing * 0.9
         spacing: Kirigami.Units.smallSpacing * 0.4
 
         RowLayout {

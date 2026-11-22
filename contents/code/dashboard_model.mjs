@@ -29,7 +29,7 @@ var METRO_COLORS = [
     "#2d7d9a" // steel
 ];
 
-var TILE_SIZES = ["small", "medium", "wide"];
+var TILE_SIZES = ["medium", "double", "wide"];
 var TILE_CONTENTS = ["", "both", "title", "icon"];
 
 // A tile row is one line of glyph and state answer plus the name in two lines,
@@ -79,14 +79,18 @@ function readableTextColor(hex) {
     return luminance > 0.45 ? "#1a1a1a" : "#ffffff";
 }
 
-// Grid footprint of a tile in columns/rows. Every tile is exactly one compact
-// row tall - size only decides how many columns it spans. (rows is still part
-// of the shape so callers and tests can reason about the grid.)
+// Grid footprint of a tile in columns/rows. "Columns" means columns: the
+// number the setting offers is the number of ordinary tiles that stand in a
+// row. The dashboard as it arrived from 1.2 asked every tile for two of them,
+// so "4 columns" showed two tiles, "5" showed two and a gap nobody had asked
+// for, and the number on the screen looked unrelated to the one in settings.
+// Every tile is exactly one compact row tall - size only spans columns. (rows
+// is still part of the shape so callers and tests can reason about the grid.)
 function tileSpan(size, columns) {
     var cols = Math.max(1, columns || 4);
-    if (size === "small") return { cols: 1, rows: 1 };
-    if (size === "medium") return { cols: Math.min(2, cols), rows: 1 };
-    return { cols: cols, rows: 1 }; // wide (and legacy "large")
+    if (size === "double") return { cols: Math.min(2, cols), rows: 1 };
+    if (size === "wide") return { cols: cols, rows: 1 }; // including legacy "large"
+    return { cols: 1, rows: 1 }; // the default, and anything the file invented
 }
 
 // Metro-style first-fit packing as plain rectangles, so the UI can place the
@@ -171,10 +175,14 @@ function generateId(prefix, taken) {
     return prefix + n;
 }
 
-// One size vocabulary for sanitize and setTileSize: "large" was folded into
-// the full-width single row in 1.2, everything unknown falls back to medium.
+// One size vocabulary for sanitize and setTileSize. The names are the ones the
+// card sizes left behind: "large" (1.2) was the full-width single row, and
+// "small" was half of the tile that is the default now - half of two columns
+// being one column, which is what the default is worth, so a saved "small"
+// lands on the default and keeps the width it had.
 function normalizeSize(value) {
     if (value === "large") return "wide";
+    if (value === "small") return "medium";
     return TILE_SIZES.indexOf(value) !== -1 ? value : "medium";
 }
 
@@ -230,11 +238,15 @@ function migrateLegacyCards(cardsJson) {
     for (var i = 0; i < cards.length; i++) {
         var card = cards[i];
         if (!card || !card.entityId) continue;
+        // The old card sizes were footprints in the same units the tiles use:
+        // a 1x1 is one column, a 2x1 or 2x2 takes two of them. The old 2x2's
+        // second row has nowhere to go - tiles are one compact row tall - so
+        // it keeps its width and loses the height it was never able to fill.
         var size = "medium";
-        if (card.size === "1x1") size = "small";
-        else if (card.size === "2x1") size = "wide";
+        if (card.size === "1x1") size = "medium";
+        else if (card.size === "2x1") size = "double";
         else if (card.size === "1x2") size = "medium";
-        else if (card.size === "2x2") size = "wide";
+        else if (card.size === "2x2") size = "double";
         var tile = sanitizeTile({ entityId: card.entityId, size: size }, takenEntities);
         if (tile) tiles.push(tile);
     }

@@ -123,7 +123,6 @@ Item {
                 entityId: modelData.entityId || ""
                 haManager: groupRoot.haManager
                 presentation: groupRoot.dataMap ? groupRoot.dataMap[entityId] : null
-                size: modelData.size || "medium"
                 tileColor: groupRoot.groupColor
                 contentMode: modelData.content && modelData.content.length > 0
                     ? modelData.content : groupRoot.defaultContent
